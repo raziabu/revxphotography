@@ -1,0 +1,108 @@
+<%- include('../partials/head', { admin: true, noindex: true }) %>
+<% const allCats = [...new Set([...albums.map(a => a.category), ...items.map(i => i.category)].filter(Boolean))]; %>
+<datalist id="cats"><% allCats.forEach(c => { %><option value="<%= c %>"><% }) %></datalist>
+
+<div class="admin-head">
+  <div>
+    <h1>Portfolio</h1>
+    <p class="muted">Everything here is public on the homepage. Group a shoot into an <strong>album</strong> (one cover, its own page), or add single shots to the loose grid.</p>
+  </div>
+  <button class="btn primary" data-toggle="#new-album">+ New album</button>
+</div>
+
+<form id="new-album" class="card stack" method="post" action="/admin/albums" <%= albums.length ? 'hidden' : '' %>>
+  <h2>New album</h2>
+  <div class="row">
+    <label>Album title<input name="title" placeholder="BMW M3 — night session" required></label>
+    <label>Category <span class="muted">(optional)</span><input name="category" list="cats" placeholder="BMW, Mercedes, Night, Rolling…"></label>
+  </div>
+  <label>Short description <span class="muted">(optional)</span><input name="description" placeholder="Shot in Majdal Shams, October 2026"></label>
+  <div class="actions"><button class="btn primary">Create album</button><span class="muted small">You add photos on the next screen.</span></div>
+</form>
+
+<% if (albums.length) { %>
+<h2 class="subhead">Albums</h2>
+<div class="file-grid albums">
+  <% albums.forEach((a, idx) => { %>
+  <div class="file-card">
+    <a class="thumb" href="/admin/albums/<%= a.id %>">
+      <% if (a.cover && a.cover.kind !== 'embed') { %>
+        <img src="/p/<%= a.cover.id %>/thumb" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'tile-fallback',textContent:'▶'}))">
+      <% } else if (a.cover && embedThumb(a.cover.embed_url)) { %>
+        <img src="<%= embedThumb(a.cover.embed_url) %>" alt="">
+      <% } else { %>
+        <div class="tile-fallback">＋</div>
+      <% } %>
+      <span class="cover-tag"><%= a.item_count %> items</span>
+    </a>
+    <div class="file-meta">
+      <span class="name"><%= a.title %></span>
+      <span class="muted small"><%= a.category || 'No category' %></span>
+    </div>
+    <div class="file-actions">
+      <a class="linklike small" href="/admin/albums/<%= a.id %>">Manage</a>
+      <a class="linklike small" target="_blank" rel="noopener" href="/albums/<%= a.slug %>">View ↗</a>
+      <form method="post" action="/admin/albums/<%= a.id %>/move"><input type="hidden" name="dir" value="up"><button class="linklike small" <%= idx === 0 ? 'disabled' : '' %>>↑</button></form>
+      <form method="post" action="/admin/albums/<%= a.id %>/move"><input type="hidden" name="dir" value="down"><button class="linklike small" <%= idx === albums.length - 1 ? 'disabled' : '' %>>↓</button></form>
+    </div>
+  </div>
+  <% }) %>
+</div>
+<% } %>
+
+<h2 class="subhead">Single shots</h2>
+<div class="two-col">
+  <aside class="stack">
+    <form class="card stack" method="post" action="/admin/portfolio" enctype="multipart/form-data">
+      <h2>Add single shots</h2>
+      <label>Title <span class="muted">(optional, file name is used if empty)</span><input name="title" placeholder="Golden hour rolling shot"></label>
+      <label>Category <span class="muted">(optional)</span><input name="category" list="cats" placeholder="Mercedes, Night, Rolling…"></label>
+      <% if (albums.length) { %>
+      <label>Put into album<select name="album_id"><option value="">— none, show in the loose grid —</option><% albums.forEach(a => { %><option value="<%= a.id %>"><%= a.title %></option><% }) %></select></label>
+      <% } %>
+      <label>Photos / video files<input type="file" name="files" multiple accept="image/*,video/*,.heic,.heif,.mov,.mp4"></label>
+      <div class="or">or</div>
+      <label>YouTube / Vimeo link<input name="embed_url" type="url" placeholder="https://youtu.be/…"></label>
+      <div class="actions"><button class="btn primary">Add to portfolio</button></div>
+      <% if (!hasFfmpeg) { %><p class="muted small">Tip: for uploaded video files, install ffmpeg on the server to get automatic poster frames. YouTube/Vimeo links always get a thumbnail.</p><% } %>
+    </form>
+  </aside>
+
+  <section>
+    <% if (!items.length) { %>
+      <div class="empty"><p>No single shots yet. Albums are a nicer way to show a full shoot; single shots are for one-off highlights.</p></div>
+    <% } else { %>
+    <div class="file-grid">
+      <% items.forEach((it, idx) => { %>
+      <div class="file-card">
+        <div class="thumb" style="--ratio: <%= it.width && it.height ? it.height / it.width : 0.66 %>">
+          <% if (it.kind === 'embed') { %>
+            <% const t = embedThumb(it.embed_url); %>
+            <% if (t) { %><img src="<%= t %>" alt=""><% } else { %><div class="tile-fallback">▶</div><% } %>
+            <span class="play">▶</span>
+          <% } else if (it.kind === 'video') { %>
+            <img src="/p/<%= it.id %>/thumb" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'tile-fallback',textContent:'▶'}))">
+            <span class="play">▶</span>
+          <% } else { %>
+            <img src="/p/<%= it.id %>/thumb" alt="" loading="lazy" data-lb data-type="image" data-src="/p/<%= it.id %>/large" data-caption="<%= it.title %>">
+          <% } %>
+        </div>
+        <form class="file-meta stack tight" method="post" action="/admin/portfolio/<%= it.id %>">
+          <input name="title" value="<%= it.title %>" placeholder="Title">
+          <input name="category" value="<%= it.category %>" placeholder="Category" list="cats">
+          <% if (albums.length) { %><select name="album_id"><option value="">No album</option><% albums.forEach(a => { %><option value="<%= a.id %>">→ <%= a.title %></option><% }) %></select><% } %>
+          <button class="linklike small">Save</button>
+        </form>
+        <div class="file-actions">
+          <form method="post" action="/admin/portfolio/<%= it.id %>/move"><input type="hidden" name="dir" value="up"><button class="linklike small" <%= idx === 0 ? 'disabled' : '' %>>↑</button></form>
+          <form method="post" action="/admin/portfolio/<%= it.id %>/move"><input type="hidden" name="dir" value="down"><button class="linklike small" <%= idx === items.length - 1 ? 'disabled' : '' %>>↓</button></form>
+          <form method="post" action="/admin/portfolio/<%= it.id %>/delete" data-confirm="Remove this from the portfolio?"><button class="linklike small danger-text">Delete</button></form>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+    <% } %>
+  </section>
+</div>
+
+<%- include('../partials/foot') %>

@@ -1,0 +1,14 @@
+<%- include('../partials/head', { noindex: true }) %>
+<section class="auth-card">
+  <p class="eyebrow">Welcome</p>
+  <h1>Set up your studio</h1>
+  <p class="muted">This only happens once. Choose a name for the site and an admin password you'll use to upload work and manage client galleries.</p>
+  <% if (error) { %><div class="notice error"><%= error %></div><% } %>
+  <form method="post" action="/setup" class="stack">
+    <label>Studio / your name<input name="studio_name" placeholder="e.g. RevX Photography" required autofocus></label>
+    <label>Admin password<input type="password" name="password" minlength="8" required autocomplete="new-password"></label>
+    <label>Confirm password<input type="password" name="confirm" minlength="8" required autocomplete="new-password"></label>
+    <button class="btn primary">Create site</button>
+  </form>
+</section>
+<%- include('../partials/foot') %>

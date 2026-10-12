@@ -1,0 +1,57 @@
+<%- include('../partials/head', { admin: true, noindex: true }) %>
+
+<div class="admin-head">
+  <div>
+    <h1>Client galleries</h1>
+    <p class="muted">Each gallery has its own private link. Share it with the client; it unlocks for download once you mark it paid (or they pay online).</p>
+  </div>
+  <button class="btn primary" data-toggle="#new-gallery">+ New gallery</button>
+</div>
+
+<div class="stats">
+  <div class="stat"><span class="label">Galleries</span><strong><%= stats.total %></strong></div>
+  <div class="stat"><span class="label">Awaiting payment</span><strong><%= stats.locked %></strong></div>
+  <div class="stat"><span class="label">Paid</span><strong><%= stats.paid %></strong></div>
+  <div class="stat"><span class="label">Collected</span><strong><%= money(stats.revenue, settings.currency || 'USD') %></strong></div>
+</div>
+
+<form id="new-gallery" class="card stack" method="post" action="/admin/galleries" <%= galleries.length ? 'hidden' : '' %>>
+  <h2>New client gallery</h2>
+  <div class="row">
+    <label>Client name<input name="client_name" placeholder="Sara &amp; Daniel" required></label>
+    <label>Client email <span class="muted">(optional)</span><input type="email" name="client_email" placeholder="client@example.com"></label>
+  </div>
+  <div class="row">
+    <label>Gallery title<input name="title" placeholder="Wedding — June 2026"></label>
+    <label>Price<div class="inline"><input name="price" type="number" step="0.01" min="0" placeholder="0.00"><input name="currency" value="<%= settings.currency || 'USD' %>" maxlength="3" class="narrow" style="text-transform:uppercase"></div></label>
+  </div>
+  <label>Note for the client <span class="muted">(optional)</span><textarea name="description" rows="2" placeholder="Here are your edited photos and the highlight film. Enjoy!"></textarea></label>
+  <div class="actions"><button class="btn primary">Create gallery</button></div>
+</form>
+
+<% if (galleries.length) { %>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>Gallery</th><th>Client</th><th>Files</th><th>Price</th><th>Status</th><th>Created</th><th></th></tr></thead>
+  <tbody>
+  <% galleries.forEach((g) => { %>
+    <tr>
+      <td><a class="strong" href="/admin/galleries/<%= g.id %>"><%= g.title %></a></td>
+      <td><%= g.client_name %><% if (g.client_email) { %><br><span class="muted small"><%= g.client_email %></span><% } %></td>
+      <td><%= g.file_count %></td>
+      <td><%= g.price_cents ? money(g.price_cents, g.currency) : '—' %></td>
+      <td><span class="badge <%= g.status %>"><%= g.status === 'paid' ? 'Paid · unlocked' : 'Locked' %></span></td>
+      <td class="muted small"><%= new Date(g.created_at + 'Z').toLocaleDateString('en-GB') %></td>
+      <td class="row-actions">
+        <button class="btn small ghost" data-copy="<%= base %>/g/<%= g.token %>">Copy link</button>
+        <a class="btn small ghost" target="_blank" rel="noopener" href="/g/<%= g.token %>">Preview</a>
+        <a class="btn small" href="/admin/galleries/<%= g.id %>">Manage</a>
+      </td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>
+</div>
+<% } %>
+
+<%- include('../partials/foot') %>

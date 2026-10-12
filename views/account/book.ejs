@@ -1,0 +1,72 @@
+<%- include('../partials/head', { noindex: true }) %>
+
+<section class="auth-wrap">
+  <div class="auth-card wide reveal in">
+    <p class="eyebrow">Booking request</p>
+    <h1>Book a shoot</h1>
+    <p class="muted">Hi <%= client.name.split(' ')[0] %>. Pick a package, tell me about the car and when you'd like to shoot. I'll confirm the date and the final price with you<% if (client.phone) { %> on <%= client.phone %><% } else { %> by email<% } %>.</p>
+
+    <% if (error) { %><div class="notice error"><%= error %></div><% } %>
+
+    <form method="post" action="/book" class="stack" data-calc='<%- JSON.stringify(calc) %>'>
+      <% if (packages.length) { %>
+      <fieldset class="package-pick">
+        <legend>Package</legend>
+        <% packages.forEach((p) => { %>
+        <label class="pick <%= form.package === p.slug ? 'on' : '' %>">
+          <input type="radio" name="package" value="<%= p.slug %>" <%= form.package === p.slug ? 'checked' : '' %>>
+          <span class="pick-name"><%= p.name %></span>
+          <span class="pick-price"><%= money(p.price_cents, p.currency) %></span>
+          <span class="pick-desc"><%= p.features.split('\n').filter(Boolean).join(' · ') %></span>
+        </label>
+        <% }) %>
+        <label class="pick custom <%= form.package === 'custom' ? 'on' : '' %>">
+          <input type="radio" name="package" value="custom" <%= form.package === 'custom' ? 'checked' : '' %>>
+          <span class="pick-name">REV X CUSTOM</span>
+          <span class="pick-price"><span data-calc-total>—</span></span>
+          <span class="pick-desc">A package of your choice plus extra photos or videos</span>
+        </label>
+        <div class="custom-fields" <%= form.package === 'custom' ? '' : 'hidden' %>>
+          <% const baseSlug = form.base || (packages[0] && packages[0].slug); %>
+          <div class="calc-row">
+            <span>Start from</span>
+            <div class="chips calc-bases">
+              <% packages.forEach((p) => { %><label class="chip <%= p.slug === baseSlug ? 'active' : '' %>"><input type="radio" name="base" value="<%= p.slug %>" <%= p.slug === baseSlug ? 'checked' : '' %> data-calc-base><%= p.name.replace(/^REV ?X\s*/i, '') %></label><% }) %>
+            </div>
+          </div>
+          <div class="calc-row stepper-row">
+            <span>Extra edited photos <small class="muted">(+<%= money(calc.extraPhotoCents, calc.currency) %> each)</small></span>
+            <div class="stepper"><button type="button" data-step="-1" data-for="photos">−</button><input type="number" name="extra_photos" min="0" max="<%= calc.maxExtraPhotos %>" value="<%= Math.min(form.extra_photos || 0, calc.maxExtraPhotos) %>" data-calc-extra-photos><button type="button" data-step="1" data-for="photos">+</button></div>
+          </div>
+          <div class="calc-row stepper-row">
+            <span>Extra cinematic videos <small class="muted">(+<%= money(calc.extraVideoCents, calc.currency) %> each)</small></span>
+            <div class="stepper"><button type="button" data-step="-1" data-for="videos">−</button><input type="number" name="extra_videos" min="0" max="<%= calc.maxExtraVideos %>" value="<%= Math.min(form.extra_videos || 0, calc.maxExtraVideos) %>" data-calc-extra-videos><button type="button" data-step="1" data-for="videos">+</button></div>
+          </div>
+          <p class="muted small" data-calc-breakdown></p>
+        </div>
+        <label class="pick none <%= !form.package ? 'on' : '' %>">
+          <input type="radio" name="package" value="" <%= !form.package ? 'checked' : '' %>>
+          <span class="pick-name">Not sure yet</span>
+          <span class="pick-desc">We'll figure it out together</span>
+        </label>
+      </fieldset>
+      <% } %>
+
+      <label>What kind of shoot?
+        <select name="service">
+          <% services.forEach((s) => { %><option value="<%= s %>" <%= form.service === s ? 'selected' : '' %>><%= s %></option><% }) %>
+        </select>
+      </label>
+      <label>The car<input name="car" value="<%= form.car || '' %>" required placeholder="e.g. BMW M3 G80, Mercedes C63, Golf GTI…"></label>
+      <div class="row">
+        <label>Preferred date<input type="date" name="preferred_date" value="<%= form.preferred_date || '' %>"></label>
+        <label>Location <span class="muted">(optional)</span><input name="location" value="<%= form.location || '' %>" placeholder="Majdal Shams, Golan, anywhere north"></label>
+      </div>
+      <label>Anything else? <span class="muted">(ideas, references, time of day)</span><textarea name="message" rows="4"><%= form.message || '' %></textarea></label>
+      <button class="btn primary big">Send booking request</button>
+      <p class="muted small center">No payment now. Prices are confirmed with you before the shoot; you pay after, through your private gallery.</p>
+    </form>
+  </div>
+</section>
+
+<%- include('../partials/foot') %>

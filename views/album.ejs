@@ -1,0 +1,45 @@
+<%- include('partials/head') %>
+
+<section class="gallery-head reveal">
+  <a class="muted small backlink" href="/#work">← All work</a>
+  <% if (album.category) { %><p class="eyebrow"><%= album.category %></p><% } %>
+  <h1 class="display"><%= album.title %></h1>
+  <% if (album.description) { %><p class="lede"><%= album.description %></p><% } %>
+  <p class="meta"><%= items.length %> <%= items.length === 1 ? 'item' : 'items' %></p>
+</section>
+
+<% if (!items.length) { %>
+  <div class="empty"><p>This album is empty.</p></div>
+<% } else { %>
+<div class="masonry" data-protect>
+  <% items.forEach((it, i) => {
+       const ratio = it.width && it.height ? (it.height / it.width) : 0.66;
+       let type = it.kind, src = '', thumb = '';
+       if (it.kind === 'image') { src = `/p/${it.id}/large`; thumb = `/p/${it.id}/thumb`; }
+       else if (it.kind === 'video') { src = `/p/${it.id}/video`; thumb = `/p/${it.id}/thumb`; }
+       else { type = 'embed'; src = embedSrc(it.embed_url) || ''; thumb = embedThumb(it.embed_url) || ''; }
+  %>
+  <figure class="tile reveal" data-lb data-type="<%= type %>" data-src="<%= src %>" data-caption="<%= it.title %>" style="--ratio: <%= ratio %>; --delay: <%= (i % 6) * 60 %>ms">
+    <% if (thumb) { %>
+      <img src="<%= thumb %>" alt="<%= it.title %>" loading="lazy" onerror="this.remove()">
+    <% } else if (it.kind === 'video') { %>
+      <video src="<%= src %>#t=0.5" preload="metadata" muted playsinline></video>
+    <% } else { %>
+      <div class="tile-fallback">▶</div>
+    <% } %>
+    <% if (type !== 'image') { %><span class="play">▶</span><% } %>
+    <figcaption><strong><%= it.title %></strong></figcaption>
+  </figure>
+  <% }) %>
+</div>
+<% } %>
+
+<section class="section contact-strip reveal">
+  <h2>Want shots like these?</h2>
+  <div class="hero-actions">
+    <a class="btn primary" href="/book">Book a shoot</a>
+    <% if (settings.whatsapp) { %><a class="btn ghost" target="_blank" rel="noopener" href="https://wa.me/<%= settings.whatsapp.replace(/\D/g,'') %>">WhatsApp</a><% } %>
+  </div>
+</section>
+
+<%- include('partials/foot') %>

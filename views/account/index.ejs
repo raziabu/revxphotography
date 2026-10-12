@@ -1,0 +1,74 @@
+<%- include('../partials/head', { noindex: true }) %>
+<% const statusLabel = { new: 'Waiting for confirmation', confirmed: 'Confirmed', declined: 'Not available', done: 'Completed' }; %>
+
+<div class="admin-head">
+  <div>
+    <p class="eyebrow">My account</p>
+    <h1>Hi, <%= client.name.split(' ')[0] %></h1>
+    <p class="muted"><%= client.email %><% if (client.phone) { %> · <%= client.phone %><% } %></p>
+  </div>
+  <div class="actions">
+    <a class="btn primary" href="/book">+ Book a shoot</a>
+    <form method="post" action="/account/signout"><button class="btn ghost">Sign out</button></form>
+  </div>
+</div>
+
+<% if (error) { %><div class="notice error"><%= error %></div><% } %>
+
+<div class="two-col account">
+  <section class="stack">
+    <div class="card stack">
+      <h2>Your bookings</h2>
+      <% if (!bookings.length) { %>
+        <p class="muted">No bookings yet. <a class="link" href="/book">Request your first shoot</a>.</p>
+      <% } else { %>
+        <ul class="plain booking-list">
+          <% bookings.forEach((b) => { %>
+          <li class="booking-item">
+            <div>
+              <strong><%= b.service %></strong> · <%= b.car %>
+              <% if (b.package_name) { %><div class="small pkg-tag"><%= b.package_name %><% if (b.estimate_cents) { %> · <%= money(b.estimate_cents, settings.currency || 'ILS') %><% } %></div><% } %>
+              <div class="muted small"><% if (b.preferred_date) { %>Preferred <%= b.preferred_date %> · <% } %><% if (b.location) { %><%= b.location %> · <% } %>sent <%= new Date(b.created_at + 'Z').toLocaleDateString('en-GB') %></div>
+              <% if (b.admin_note) { %><div class="note">“<%= b.admin_note %>”</div><% } %>
+            </div>
+            <span class="badge <%= b.status %>"><%= statusLabel[b.status] || b.status %></span>
+          </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </div>
+
+    <div class="card stack">
+      <h2>Your galleries</h2>
+      <% if (!galleries.length) { %>
+        <p class="muted">Galleries from your shoots will appear here once <%= settings.studio_name || 'the studio' %> uploads them (they're matched to your email).</p>
+      <% } else { %>
+        <div class="album-grid">
+          <% galleries.forEach((g) => { %>
+          <a class="album-card" href="/g/<%= g.token %>">
+            <div class="album-cover">
+              <% if (g.cover_file_id) { %><img src="/g/<%= g.token %>/img/<%= g.cover_file_id %>/<%= g.status === 'paid' ? 'thumb' : 'wm' %>" alt="" loading="lazy"><% } else { %><div class="tile-fallback">📷</div><% } %>
+              <span class="album-count"><%= g.file_count %> files</span>
+            </div>
+            <div class="album-meta"><strong><%= g.title %></strong><span class="badge <%= g.status %>"><%= g.status === 'paid' ? 'Unlocked' : 'Locked' %></span></div>
+          </a>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </section>
+
+  <aside>
+    <form class="card stack" method="post" action="/account/profile">
+      <h2>Profile</h2>
+      <label>Name<input name="name" value="<%= client.name %>" required></label>
+      <label>Phone / WhatsApp<input name="phone" value="<%= client.phone %>"></label>
+      <hr>
+      <label>Current password<input type="password" name="current_password" autocomplete="current-password"></label>
+      <label>New password <span class="muted">(leave blank to keep)</span><input type="password" name="new_password" minlength="8" autocomplete="new-password"></label>
+      <div class="actions"><button class="btn">Save</button></div>
+    </form>
+  </aside>
+</div>
+
+<%- include('../partials/foot') %>

@@ -1,0 +1,17 @@
+</main>
+<footer class="footer">
+  <span>© <%= new Date().getFullYear() %> <%= settings.studio_name || 'Studio' %></span>
+  <% if (!(typeof admin !== 'undefined' && admin)) { %>
+    <span class="muted"><%= settings.tagline || "Photography & film" %></span>
+  <% } %>
+</footer>
+<div id="lightbox" class="lightbox" hidden>
+  <button class="lb-close" aria-label="Close">×</button>
+  <button class="lb-prev" aria-label="Previous">‹</button>
+  <button class="lb-next" aria-label="Next">›</button>
+  <div class="lb-stage"></div>
+  <div class="lb-caption"></div>
+</div>
+<script src="/app.js?v=<%= assetV %>"></script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<%- include('partials/head') %>
+<%
+  const tileData = (it) => {
+    let type = it.kind, src = '', thumb = '';
+    if (it.kind === 'image') { type = 'image'; src = `/p/${it.id}/large`; thumb = `/p/${it.id}/thumb`; }
+    else if (it.kind === 'video') { type = 'video'; src = `/p/${it.id}/video`; thumb = `/p/${it.id}/thumb`; }
+    else { type = 'embed'; src = embedSrc(it.embed_url) || ''; thumb = embedThumb(it.embed_url) || ''; }
+    return { type, src, thumb };
+  };
+%>
+
+<% if (hasHero) { %>
+<section class="hero-scroll" id="hero" data-car-hero>
+  <div class="hero-sticky">
+    <canvas class="hero-canvas" aria-hidden="true"></canvas>
+    <div class="hero-vignette"></div>
+    <div class="hero-copy hero-copy-start">
+      <p class="eyebrow"><%= settings.hero_eyebrow || "Photography · Videography" %></p>
+      <h1 class="display"><%= settings.studio_name || 'Studio' %></h1>
+      <% if (settings.tagline) { %><p class="lede"><%= settings.tagline %></p><% } %>
+      <div class="hero-actions">
+        <a class="btn primary" href="#work">See the work</a>
+        <a class="btn ghost" href="/book">Book a shoot</a>
+      </div>
+    </div>
+    <div class="hero-copy hero-copy-mid">
+      <p class="display small">Every angle.</p>
+      <p class="lede">Static, rolling, night and detail shots.</p>
+    </div>
+    <div class="hero-copy hero-copy-end">
+      <p class="display small">Your car, cinematic.</p>
+      <a class="btn primary big" href="/book">Book a shoot</a>
+    </div>
+    <div class="scroll-hint"><span></span>Scroll</div>
+  </div>
+</section>
+<% } else { %>
+<section class="hero reveal">
+  <p class="eyebrow"><%= settings.hero_eyebrow || "Photography · Videography" %></p>
+  <h1 class="display"><%= settings.studio_name || 'Studio' %></h1>
+  <% if (settings.tagline) { %><p class="lede"><%= settings.tagline %></p><% } %>
+  <div class="hero-actions">
+    <a class="btn primary" href="#work">See the work</a>
+    <a class="btn ghost" href="/book">Book a shoot</a>
+  </div>
+</section>
+<% } %>
+
+<section id="work" class="section">
+  <div class="section-head reveal">
+    <div>
+      <p class="eyebrow">Portfolio</p>
+      <h2>Selected work</h2>
+    </div>
+    <% if (categories.length > 1) { %>
+    <div class="chips" data-filter>
+      <button class="chip active" data-cat="">All</button>
+      <% categories.forEach((c) => { %><button class="chip" data-cat="<%= c %>"><%= c %></button><% }) %>
+    </div>
+    <% } %>
+  </div>
+
+  <% if (!albums.length && !items.length) { %>
+    <div class="empty reveal">
+      <p>No work has been published yet.</p>
+      <% if (isAdmin) { %><a class="btn primary" href="/admin/portfolio">Upload your first piece</a><% } %>
+    </div>
+  <% } %>
+
+  <% if (albums.length) { %>
+  <div class="album-grid" data-filter-group data-protect>
+    <% albums.forEach((a, i) => {
+         const c = a.cover ? tileData(a.cover) : null;
+    %>
+    <a class="album-card reveal" href="/albums/<%= a.slug %>" data-cat="<%= a.category %>" style="--delay: <%= (i % 6) * 60 %>ms">
+      <div class="album-cover">
+        <% if (c && c.thumb) { %><img src="<%= c.thumb %>" alt="<%= a.title %>" loading="lazy"><% } else { %><div class="tile-fallback">▶</div><% } %>
+        <span class="album-count"><%= a.items.length %> <%= a.items.length === 1 ? 'item' : 'items' %></span>
+      </div>
+      <div class="album-meta">
+        <strong><%= a.title %></strong>
+        <% if (a.category) { %><span><%= a.category %></span><% } %>
+      </div>
+    </a>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <% if (items.length) { %>
+  <% if (albums.length) { %><h3 class="subhead reveal">More shots</h3><% } %>
+  <div class="masonry" data-filter-group data-protect>
+    <% items.forEach((it, i) => {
+         const ratio = it.width && it.height ? (it.height / it.width) : 0.66;
+         const t = tileData(it);
+    %>
+    <figure class="tile reveal" data-cat="<%= it.category %>" data-lb data-type="<%= t.type %>" data-src="<%= t.src %>" data-caption="<%= it.title %><%= it.category ? ' · ' + it.category : '' %>" style="--ratio: <%= ratio %>; --delay: <%= (i % 6) * 60 %>ms">
+      <% if (t.thumb) { %>
+        <img src="<%= t.thumb %>" alt="<%= it.title %>" loading="lazy" onerror="this.remove()">
+      <% } else if (it.kind === 'video') { %>
+        <video src="<%= t.src %>#t=0.5" preload="metadata" muted playsinline></video>
+      <% } else { %>
+        <div class="tile-fallback">▶</div>
+      <% } %>
+      <% if (t.type !== 'image') { %><span class="play">▶</span><% } %>
+      <figcaption>
+        <strong><%= it.title %></strong>
+        <% if (it.category) { %><span><%= it.category %></span><% } %>
+      </figcaption>
+    </figure>
+    <% }) %>
+  </div>
+  <% } %>
+</section>
+
+<% if (packages.length) { %>
+<section id="packages" class="section packages">
+  <div class="section-head reveal">
+    <div>
+      <p class="eyebrow">Packages</p>
+      <h2>Pick your deal</h2>
+    </div>
+    <p class="muted small">Prices in <%= calc.currency %>. Travel outside the area and extra editing on request.</p>
+  </div>
+  <div class="package-grid">
+    <% packages.forEach((p, i) => { %>
+    <div class="package reveal <%= p.badge ? 'featured' : '' %>" style="--delay: <%= i * 80 %>ms">
+      <% if (p.badge) { %><span class="package-badge"><%= p.badge %></span><% } %>
+      <h3 class="package-name"><%= p.name %></h3>
+      <div class="package-price"><%= money(p.price_cents, p.currency) %></div>
+      <ul class="package-features">
+        <% p.features.split('\n').filter(Boolean).forEach((f) => { %><li><%= f %></li><% }) %>
+      </ul>
+      <a class="btn <%= p.badge ? 'primary' : 'ghost' %>" href="/book?package=<%= p.slug %>">Book <%= p.name.replace(/^REV ?X\s*/i, '') %></a>
+    </div>
+    <% }) %>
+
+    <div class="package custom reveal" style="--delay: <%= packages.length * 80 %>ms" data-calc='<%- JSON.stringify(calc) %>'>
+      <span class="package-badge alt">Build your own</span>
+      <h3 class="package-name">REV X CUSTOM</h3>
+      <div class="package-price"><span data-calc-total>—</span></div>
+      <p class="muted small" data-calc-breakdown>Start from a package, then add more photos or videos.</p>
+      <div class="calc-row">
+        <span>Start from</span>
+        <div class="chips calc-bases">
+          <% packages.forEach((p, i) => { %><label class="chip <%= i === 0 ? 'active' : '' %>"><input type="radio" name="calc-base" value="<%= p.slug %>" <%= i === 0 ? 'checked' : '' %> data-calc-base><%= p.name.replace(/^REV ?X\s*/i, '') %></label><% }) %>
+        </div>
+      </div>
+      <div class="calc-row stepper-row">
+        <span>Extra edited photos <small class="muted">(+<%= money(calc.extraPhotoCents, calc.currency) %> each)</small></span>
+        <div class="stepper"><button type="button" data-step="-1" data-for="photos" aria-label="Fewer photos">−</button><input type="number" min="0" max="<%= calc.maxExtraPhotos %>" value="0" data-calc-extra-photos><button type="button" data-step="1" data-for="photos" aria-label="More photos">+</button></div>
+      </div>
+      <div class="calc-row stepper-row">
+        <span>Extra cinematic videos <small class="muted">(+<%= money(calc.extraVideoCents, calc.currency) %> each)</small></span>
+        <div class="stepper"><button type="button" data-step="-1" data-for="videos" aria-label="Fewer videos">−</button><input type="number" min="0" max="<%= calc.maxExtraVideos %>" value="0" data-calc-extra-videos><button type="button" data-step="1" data-for="videos" aria-label="More videos">+</button></div>
+      </div>
+      <a class="btn primary" href="/book?package=custom" data-calc-link>Book custom</a>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<% if (clients.length) { %>
+<section id="clients" class="section clients">
+  <div class="section-head reveal">
+    <div>
+      <p class="eyebrow">Clients</p>
+      <h2>People I've shot for</h2>
+    </div>
+  </div>
+  <% clients.forEach((c) => { %>
+  <div class="client-block reveal">
+    <h3 class="client-name"><%= c.name %></h3>
+    <div class="album-grid">
+      <% c.galleries.forEach((g, i) => { %>
+      <a class="album-card reveal" href="/clients/<%= g.public_slug %>" style="--delay: <%= (i % 6) * 60 %>ms">
+        <div class="album-cover">
+          <% if (g.cover) { %><img src="/clients/<%= g.public_slug %>/img/<%= g.cover.id %>/<%= g.status === 'paid' ? 'thumb' : 'wm' %>" alt="<%= g.title %>" loading="lazy"><% } else { %><div class="tile-fallback">▶</div><% } %>
+          <span class="album-count"><%= g.file_count %> <%= g.file_count === 1 ? 'file' : 'files' %></span>
+        </div>
+        <div class="album-meta"><strong><%= g.title %></strong><span><%= new Date(g.created_at + 'Z').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) %></span></div>
+      </a>
+      <% }) %>
+    </div>
+  </div>
+  <% }) %>
+</section>
+<% } %>
+
+<% if (settings.about) { %>
+<section class="section about reveal">
+  <p class="eyebrow">About</p>
+  <h2>Behind the lens</h2>
+  <p class="prose"><%= settings.about %></p>
+</section>
+<% } %>
+
+<section id="contact" class="section contact">
+  <div class="reveal">
+    <p class="eyebrow">Booking</p>
+    <h2>Let's work together</h2>
+    <p class="muted"><%= settings.contact_blurb || "Get in touch for availability and pricing." %></p>
+    <div class="hero-actions"><a class="btn primary big" href="/book">Book a shoot online</a></div>
+  </div>
+  <div class="contact-grid">
+    <% let ci = 0; %>
+    <% if (settings.email) { %><a class="contact-card reveal" style="--delay: <%= ci++ * 70 %>ms" href="mailto:<%= settings.email %>"><span class="label">Email</span><%= settings.email %></a><% } %>
+    <% if (settings.phone) { %><a class="contact-card reveal" style="--delay: <%= ci++ * 70 %>ms" href="tel:<%= settings.phone.replace(/[^\d+]/g,'') %>"><span class="label">Phone</span><%= settings.phone %></a><% } %>
+    <% if (settings.whatsapp) { %><a class="contact-card reveal" style="--delay: <%= ci++ * 70 %>ms" target="_blank" rel="noopener" href="https://wa.me/<%= settings.whatsapp.replace(/\D/g,'') %>"><span class="label">WhatsApp</span>Message me</a><% } %>
+    <% if (settings.instagram) { %><a class="contact-card reveal" style="--delay: <%= ci++ * 70 %>ms" target="_blank" rel="noopener" href="https://instagram.com/<%= settings.instagram.replace(/^@/,'') %>"><span class="label">Instagram</span>@<%= settings.instagram.replace(/^@/,'') %></a><% } %>
+    <% if (settings.location) { %><div class="contact-card reveal" style="--delay: <%= ci++ * 70 %>ms"><span class="label">Based in</span><%= settings.location %></div><% } %>
+  </div>
+</section>
+
+<%- include('partials/foot') %>

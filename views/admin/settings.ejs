@@ -1,0 +1,74 @@
+<%- include('../partials/head', { admin: true, noindex: true }) %>
+
+<div class="admin-head">
+  <div>
+    <h1>Settings</h1>
+    <p class="muted">Studio details shown on the public site, payment options, and your password.</p>
+  </div>
+</div>
+
+<% if (error) { %><div class="notice error"><%= error %></div><% } %>
+
+<form method="post" action="/admin/settings" class="two-col" enctype="multipart/form-data">
+  <div class="stack">
+    <div class="card stack">
+      <h2>Look</h2>
+      <div class="logo-row">
+        <% if (settings.logo_file) { %><img class="logo-preview" src="/brand/logo?v=<%= settings.logo_file %>" alt="Current logo"><% } else { %><div class="logo-preview empty">No logo</div><% } %>
+        <div class="stack tight">
+          <label>Logo <span class="muted">(PNG with transparent background works best; shown in the top bar)</span><input type="file" name="logo" accept="image/*"></label>
+          <% if (settings.logo_file) { %><label class="check"><input type="checkbox" name="remove_logo"> Remove the logo and show the name as text</label><% } %>
+        </div>
+      </div>
+      <label>Accent colour <span class="muted">(buttons, highlights; default is gold)</span>
+        <div class="inline"><input type="color" name="accent_color" value="<%= settings.accent_color || '#d9b56b' %>" class="narrow"><span class="muted small">Pick a colour from your logo for a matching look.</span></div>
+      </label>
+    </div>
+
+    <div class="card stack">
+      <h2>Studio</h2>
+      <label>Studio / your name<input name="studio_name" value="<%= settings.studio_name || '' %>" required></label>
+      <label>Small line above the name on the homepage<input name="hero_eyebrow" value="<%= settings.hero_eyebrow || '' %>" placeholder="Photography · Videography"></label>
+      <label>Tagline<input name="tagline" value="<%= settings.tagline || '' %>" placeholder="Weddings, events &amp; brand films with a cinematic touch"></label>
+      <label>About<textarea name="about" rows="5" placeholder="A few sentences about you and how you work."><%= settings.about || '' %></textarea></label>
+      <label>Contact section text<textarea name="contact_blurb" rows="2" placeholder="Get in touch for availability and pricing."><%= settings.contact_blurb || '' %></textarea></label>
+      <label>Based in<input name="location" value="<%= settings.location || '' %>" placeholder="City, Country"></label>
+    </div>
+
+    <div class="card stack">
+      <h2>Contact</h2>
+      <label>Email<input type="email" name="email" value="<%= settings.email || '' %>"></label>
+      <label>Phone<input name="phone" value="<%= settings.phone || '' %>" placeholder="+1 555 000 0000"></label>
+      <label>WhatsApp number <span class="muted">(with country code, digits only)</span><input name="whatsapp" value="<%= settings.whatsapp || '' %>" placeholder="15550000000"></label>
+      <label>Instagram handle<input name="instagram" value="<%= settings.instagram || '' %>" placeholder="@yourname"></label>
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="card stack">
+      <h2>Payments</h2>
+      <label>Default currency <span class="muted">(3-letter code)</span><input name="currency" value="<%= settings.currency || 'USD' %>" maxlength="3" class="narrow" style="text-transform:uppercase"></label>
+      <label>Payment instructions shown on locked galleries<textarea name="payment_instructions" rows="3" placeholder="Bank transfer to … / Bit / PayPal to … — send me a screenshot and I'll unlock your gallery."><%= settings.payment_instructions || '' %></textarea></label>
+      <label>Payment link <span class="muted">(PayPal.me, Payoneer, Wise, etc.)</span><input type="url" name="payment_link" value="<%= settings.payment_link || '' %>" placeholder="https://paypal.me/yourname"></label>
+      <hr>
+      <h3>Card payments with Stripe <span class="muted small">(optional)</span></h3>
+      <p class="muted small">With a Stripe key, clients get a "Pay &amp; unlock" button and the gallery unlocks itself after the card payment. Create a free account at stripe.com, then paste the <em>secret key</em> here.</p>
+      <% if (envStripe) { %>
+        <div class="notice">Stripe is configured through the server environment (STRIPE_SECRET_KEY). Fields below are ignored.</div>
+      <% } else { %>
+        <label>Stripe secret key<input name="stripe_secret_key" value="<%= settings.stripe_secret_key || '' %>" placeholder="sk_live_…" autocomplete="off"></label>
+        <label>Stripe webhook signing secret <span class="muted">(optional, for extra reliability)</span><input name="stripe_webhook_secret" value="<%= settings.stripe_webhook_secret || '' %>" placeholder="whsec_…" autocomplete="off"></label>
+      <% } %>
+    </div>
+
+    <div class="card stack">
+      <h2>Change password</h2>
+      <label>Current password<input type="password" name="current_password" autocomplete="current-password"></label>
+      <label>New password <span class="muted">(min 8 chars, leave blank to keep)</span><input type="password" name="new_password" autocomplete="new-password" minlength="8"></label>
+    </div>
+
+    <div class="actions"><button class="btn primary big">Save settings</button></div>
+  </div>
+</form>
+
+<%- include('../partials/foot') %>

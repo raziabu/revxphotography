@@ -1,0 +1,135 @@
+<%- include('../partials/head', { admin: true, noindex: true }) %>
+<% const fmtBytes = (b) => b > 1e9 ? (b/1e9).toFixed(1)+' GB' : b > 1e6 ? (b/1e6).toFixed(0)+' MB' : (b/1e3).toFixed(0)+' KB'; %>
+
+<div class="admin-head">
+  <div>
+    <a class="muted small" href="/admin">← All galleries</a>
+    <h1><%= gallery.title %></h1>
+    <p class="muted"><%= gallery.client_name %><% if (gallery.client_email) { %> · <%= gallery.client_email %><% } %> · <%= files.length %> files</p>
+  </div>
+  <span class="badge big <%= gallery.status %>"><%= gallery.status === 'paid' ? 'Paid · unlocked' : 'Locked · awaiting payment' %></span>
+</div>
+
+<div class="two-col">
+  <aside class="stack">
+
+    <div class="card stack">
+      <h2>Private link</h2>
+      <p class="muted small">Send this to the client. Anyone with the link can see watermarked previews; downloads open after payment.</p>
+      <div class="linkbox"><input readonly value="<%= link %>" onclick="this.select()"><button class="btn primary" data-copy="<%= link %>">Copy</button></div>
+      <div class="actions">
+        <a class="btn ghost small" target="_blank" rel="noopener" href="<%= link %>">Open as client ↗</a>
+        <% if (gallery.client_email) { %>
+          <a class="btn ghost small" href="mailto:<%= gallery.client_email %>?subject=<%= encodeURIComponent('Your gallery: ' + gallery.title) %>&body=<%= encodeURIComponent('Hi ' + gallery.client_name + ',\n\nYour gallery is ready: ' + link + (gallery.price_cents ? '\n\nAmount due: ' + money(gallery.price_cents, gallery.currency) : '') + '\n\n' + (settings.studio_name || '')) %>">Email link</a>
+        <% } %>
+        <a class="btn ghost small" target="_blank" rel="noopener" href="https://wa.me/?text=<%= encodeURIComponent('Your gallery is ready: ' + link) %>">Share on WhatsApp</a>
+        <form method="post" action="/admin/galleries/<%= gallery.id %>/token" data-confirm="Generate a new link? The old link will stop working."><button class="btn ghost small danger-text">New link</button></form>
+      </div>
+    </div>
+
+    <div class="card stack status-admin <%= gallery.status %>">
+      <h2>Payment</h2>
+      <% if (gallery.status === 'paid') { %>
+        <p>Unlocked <%= gallery.paid_at ? new Date(gallery.paid_at + 'Z').toLocaleString('en-GB') : '' %><% if (gallery.payment_method) { %> via <strong><%= gallery.payment_method %></strong><% } %>. The client can download everything.</p>
+        <form method="post" action="/admin/galleries/<%= gallery.id %>/status" data-confirm="Lock this gallery again? Downloads will stop working.">
+          <input type="hidden" name="status" value="locked">
+          <button class="btn ghost small">Lock again</button>
+        </form>
+      <% } else { %>
+        <p class="price"><%= gallery.price_cents ? money(gallery.price_cents, gallery.currency) : 'No price set' %></p>
+        <p class="muted small"><% if (hasStripe) { %>Clients can pay by card from the gallery page and it unlocks automatically. <% } %>Got paid in cash or by transfer? Unlock it here.</p>
+        <form method="post" action="/admin/galleries/<%= gallery.id %>/status" class="inline">
+          <input type="hidden" name="status" value="paid">
+          <select name="method">
+            <option value="cash">Cash</option>
+            <option value="bank transfer">Bank transfer</option>
+            <option value="paypal">PayPal</option>
+            <option value="other">Other</option>
+            <option value="free">Free (no charge)</option>
+          </select>
+          <button class="btn primary">Mark as paid &amp; unlock</button>
+        </form>
+      <% } %>
+      <% if (payments.length) { %>
+        <details><summary class="muted small">Payment history</summary>
+          <ul class="plain small">
+            <% payments.forEach((p) => { %><li><%= new Date(p.created_at + 'Z').toLocaleString('en-GB') %> — <%= p.provider %> <%= p.amount_cents ? money(p.amount_cents, p.currency) : '' %><% if (p.provider_ref) { %> <span class="muted">(<%= p.provider_ref %>)</span><% } %></li><% }) %>
+          </ul>
+        </details>
+      <% } %>
+    </div>
+
+    <div class="card stack">
+      <h2>Show on the website?</h2>
+      <% if (gallery.visibility === 'public') { %>
+        <p><span class="badge paid">Public</span> Listed on the homepage under <strong><%= gallery.client_name || 'Clients' %></strong>. Visitors see a view-only page without downloads: <a target="_blank" rel="noopener" href="/clients/<%= gallery.public_slug %>">/clients/<%= gallery.public_slug %> ↗</a></p>
+        <p class="muted small">Locked galleries show watermarked previews publicly; unlocked ones show clean previews. Downloads stay on the private link only.</p>
+        <form method="post" action="/admin/galleries/<%= gallery.id %>/visibility"><input type="hidden" name="visibility" value="private"><button class="btn ghost small">Make private</button></form>
+      <% } else { %>
+        <p><span class="badge locked">Private</span> Only people with the private link can see it.</p>
+        <p class="muted small">Make it public to feature this shoot on the homepage in the "Clients" section, with <%= gallery.client_name ? gallery.client_name + "'s" : "the client's" %> name above it. Ask the client first.</p>
+        <form method="post" action="/admin/galleries/<%= gallery.id %>/visibility"><input type="hidden" name="visibility" value="public"><button class="btn small">Make public</button></form>
+      <% } %>
+    </div>
+
+    <form class="card stack" method="post" action="/admin/galleries/<%= gallery.id %>">
+      <h2>Details</h2>
+      <label>Gallery title<input name="title" value="<%= gallery.title %>" required></label>
+      <div class="row">
+        <label>Client name<input name="client_name" value="<%= gallery.client_name %>"></label>
+        <label>Client email<input type="email" name="client_email" value="<%= gallery.client_email %>"></label>
+      </div>
+      <label>Price<div class="inline"><input name="price" type="number" step="0.01" min="0" value="<%= (gallery.price_cents/100).toFixed(2) %>"><input name="currency" value="<%= gallery.currency %>" maxlength="3" class="narrow" style="text-transform:uppercase"></div></label>
+      <label>Note for the client<textarea name="description" rows="3"><%= gallery.description %></textarea></label>
+      <div class="actions"><button class="btn">Save details</button></div>
+    </form>
+
+    <form class="card danger" method="post" action="/admin/galleries/<%= gallery.id %>/delete" data-confirm="Delete this gallery and all <%= files.length %> files? This cannot be undone.">
+      <h2>Danger zone</h2>
+      <p class="muted small">Deletes the gallery, its link and every uploaded file from the server.</p>
+      <button class="btn danger">Delete gallery</button>
+    </form>
+  </aside>
+
+  <section class="stack">
+    <div class="card stack">
+      <h2>Files</h2>
+      <div class="dropzone" data-uploader="/admin/galleries/<%= gallery.id %>/files">
+        <input type="file" multiple accept="image/*,video/*,.heic,.heif,.mov,.mp4,.zip">
+        <p><strong>Drop photos &amp; videos here</strong> or click to choose</p>
+        <p class="muted small">Originals are kept exactly as uploaded. Previews are generated with a watermark for locked galleries.<% if (!hasFfmpeg) { %> Install ffmpeg on the server to get thumbnails for videos.<% } %></p>
+        <div class="progress" hidden><div class="bar"></div><span class="progress-text"></span></div>
+      </div>
+    </div>
+
+    <% if (files.length) { %>
+    <div class="file-grid">
+      <% files.forEach((f) => { %>
+      <div class="file-card <%= gallery.cover_file_id === f.id ? 'is-cover' : '' %>">
+        <div class="thumb" style="--ratio: <%= f.width && f.height ? f.height / f.width : 0.66 %>">
+          <% if (f.has_preview) { %>
+            <img src="/admin/img/<%= f.id %>/thumb" alt="" loading="lazy" data-lb data-type="image" data-src="/admin/img/<%= f.id %>/large" data-caption="<%= f.original_name %>">
+          <% } else { %>
+            <div class="tile-fallback"><%= f.kind === 'video' ? '▶' : '📄' %></div>
+          <% } %>
+          <% if (f.kind === 'video') { %><span class="play">▶</span><% } %>
+          <% if (gallery.cover_file_id === f.id) { %><span class="cover-tag">Cover</span><% } %>
+        </div>
+        <div class="file-meta">
+          <span class="name" title="<%= f.original_name %>"><%= f.original_name %></span>
+          <span class="muted small"><%= fmtBytes(f.size) %><% if (f.width) { %> · <%= f.width %>×<%= f.height %><% } %></span>
+        </div>
+        <div class="file-actions">
+          <% if (f.has_preview && gallery.cover_file_id !== f.id) { %>
+            <form method="post" action="/admin/galleries/<%= gallery.id %>/cover/<%= f.id %>"><button class="linklike small">Set as cover</button></form>
+          <% } %>
+          <form method="post" action="/admin/galleries/<%= gallery.id %>/files/<%= f.id %>/delete" data-confirm="Delete <%= f.original_name %>?"><button class="linklike small danger-text">Delete</button></form>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+    <% } %>
+  </section>
+</div>
+
+<%- include('../partials/foot') %>

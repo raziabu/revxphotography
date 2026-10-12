@@ -1,0 +1,93 @@
+<% const noindex = !showcase; %>
+<%- include('partials/head', { noindex }) %>
+<% const fmtBytes = (b) => b > 1e9 ? (b/1e9).toFixed(1)+' GB' : b > 1e6 ? (b/1e6).toFixed(0)+' MB' : (b/1e3).toFixed(0)+' KB'; %>
+<% const imgBase = showcase ? `/clients/${gallery.public_slug}/img` : `/g/${gallery.token}/img`; %>
+
+<section class="gallery-head reveal">
+  <% if (showcase) { %><a class="muted small backlink" href="/#clients">← All clients</a><% } %>
+  <p class="eyebrow"><%= showcase ? 'Client shoot' : 'Private gallery' %><% if (gallery.client_name) { %> · <%= gallery.client_name %><% } %></p>
+  <h1 class="display"><%= gallery.title %></h1>
+  <% if (gallery.description && !showcase) { %><p class="lede"><%= gallery.description %></p><% } %>
+  <p class="meta"><%= files.length %> file<%= files.length === 1 ? '' : 's' %><% if (!showcase) { %> · <%= fmtBytes(totalBytes) %><% } %><% if (unlocked && gallery.paid_at && !showcase) { %> · unlocked <%= new Date(gallery.paid_at + 'Z').toLocaleDateString('en-GB') %><% } %></p>
+</section>
+
+<% if (paidJustNow && unlocked) { %>
+  <div class="notice success">Thank you! Your payment was received and the gallery is unlocked. You can download everything below.</div>
+<% } %>
+
+<% if (!showcase) { %>
+<section class="status-card reveal <%= unlocked ? 'unlocked' : 'locked' %>">
+  <% if (unlocked) { %>
+    <div>
+      <h2>Your files are ready</h2>
+      <p class="muted">Download individual files from the grid, or grab everything as one zip.</p>
+    </div>
+    <a class="btn primary big" href="/g/<%= gallery.token %>/download-all">⬇ Download all (<%= fmtBytes(totalBytes) %>)</a>
+  <% } else { %>
+    <div>
+      <h2>🔒 Gallery locked</h2>
+      <p class="muted">You're looking at watermarked previews. Full-resolution downloads unlock once payment is confirmed.</p>
+      <% if (settings.payment_instructions) { %><p class="instructions"><%= settings.payment_instructions %></p><% } %>
+    </div>
+    <div class="pay-box">
+      <% if (gallery.price_cents > 0) { %><div class="price"><%= money(gallery.price_cents, gallery.currency) %></div><% } %>
+      <% if (canPay) { %>
+        <form method="post" action="/g/<%= gallery.token %>/pay"><button class="btn primary big">Pay &amp; unlock</button></form>
+      <% } %>
+      <% if (settings.payment_link) { %>
+        <a class="btn ghost" target="_blank" rel="noopener" href="<%= settings.payment_link %>">Pay via link ↗</a>
+      <% } %>
+      <% if (!canPay && !settings.payment_link) { %>
+        <p class="muted small">Contact <%= settings.studio_name || 'the photographer' %> to arrange payment<% if (settings.whatsapp) { %> · <a target="_blank" rel="noopener" href="https://wa.me/<%= settings.whatsapp.replace(/\D/g,'') %>">WhatsApp</a><% } %><% if (settings.email) { %> · <a href="mailto:<%= settings.email %>">Email</a><% } %>.</p>
+      <% } else { %>
+        <p class="muted small">Paid another way? <%= settings.studio_name || 'The photographer' %> will unlock this page for you.</p>
+      <% } %>
+    </div>
+  <% } %>
+</section>
+<% } %>
+
+<% if (!files.length) { %>
+  <div class="empty"><p>Files haven't been added yet. Check back soon.</p></div>
+<% } else { %>
+<section class="grid <%= unlocked ? '' : 'is-locked' %>" <%= (showcase || !unlocked) ? 'data-protect' : '' %>>
+  <% files.forEach((f, i) => {
+       const ratio = f.width && f.height ? (f.height / f.width) : 0.66;
+       const img = f.has_preview ? `${imgBase}/${f.id}/${unlocked ? 'thumb' : 'wm'}` : '';
+       const canOpen = f.has_preview || (unlocked && !showcase && f.kind === 'video');
+       const lbType = (unlocked && !showcase) ? f.kind : 'image';
+       const lbSrc = (unlocked && !showcase)
+         ? (f.kind === 'video' ? `/g/${gallery.token}/stream/${f.id}` : `/g/${gallery.token}/img/${f.id}/large`)
+         : (f.has_preview ? `${imgBase}/${f.id}/${unlocked ? 'large' : 'wm'}` : '');
+  %>
+  <figure class="tile reveal <%= f.kind %>" style="--ratio: <%= ratio %>; --delay: <%= (i % 8) * 40 %>ms"
+    <% if (canOpen) { %>
+      data-lb data-type="<%= lbType %>" data-src="<%= lbSrc %>" data-poster="<%= img %>" data-caption="<%= showcase ? '' : f.original_name %>"
+      <% if (unlocked && !showcase) { %>data-download="/g/<%= gallery.token %>/download/<%= f.id %>"<% } %>
+    <% } %>>
+    <% if (img) { %>
+      <img src="<%= img %>" alt="<%= showcase ? gallery.title : f.original_name %>" loading="lazy" draggable="false">
+    <% } else { %>
+      <div class="tile-fallback"><%= f.kind === 'video' ? '▶' : '📄' %><small><%= showcase ? '' : f.original_name %></small></div>
+    <% } %>
+    <% if (f.kind === 'video') { %><span class="play"><%= unlocked && !showcase ? '▶' : (showcase ? '▶' : '🔒') %></span><% } %>
+    <% if (unlocked && !showcase) { %>
+      <a class="dl" href="/g/<%= gallery.token %>/download/<%= f.id %>" title="Download <%= f.original_name %>" onclick="event.stopPropagation()">⬇</a>
+    <% } %>
+    <% if (!showcase) { %><figcaption><strong><%= f.original_name %></strong><span><%= fmtBytes(f.size) %></span></figcaption><% } %>
+  </figure>
+  <% }) %>
+</section>
+<% } %>
+
+<% if (showcase) { %>
+<section class="section contact-strip reveal">
+  <h2>Want a shoot like this?</h2>
+  <div class="hero-actions">
+    <a class="btn primary" href="/book">Book a shoot</a>
+    <% if (settings.whatsapp) { %><a class="btn ghost" target="_blank" rel="noopener" href="https://wa.me/<%= settings.whatsapp.replace(/\D/g,'') %>">WhatsApp</a><% } %>
+  </div>
+</section>
+<% } %>
+
+<%- include('partials/foot') %>

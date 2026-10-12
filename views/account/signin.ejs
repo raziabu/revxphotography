@@ -1,0 +1,47 @@
+<%- include('../partials/head', { noindex: true }) %>
+
+<section class="auth-wrap">
+  <div class="auth-card wide reveal in">
+    <p class="eyebrow">Booking</p>
+    <h1><%= mode === 'signup' ? 'Create your account' : 'Welcome back' %></h1>
+    <p class="muted">Sign in to book a shoot with <%= settings.studio_name || 'the studio' %>, follow your booking, and find the galleries made for you.</p>
+
+    <div class="tabs" role="tablist">
+      <a class="tab <%= mode === 'signin' ? 'active' : '' %>" href="/account/signin?next=<%= encodeURIComponent(next) %>">Sign in</a>
+      <a class="tab <%= mode === 'signup' ? 'active' : '' %>" href="/account/signin?mode=signup&next=<%= encodeURIComponent(next) %>">Create account</a>
+    </div>
+
+    <% if (error) { %><div class="notice error"><%= error %></div><% } %>
+
+    <% if (mode === 'signup') { %>
+    <form method="post" action="/account/signup" class="stack">
+      <input type="hidden" name="next" value="<%= next %>">
+      <label>Your name<input name="name" value="<%= form.name || '' %>" required autofocus autocomplete="name" placeholder="Full name"></label>
+      <div class="row">
+        <label>Email<input type="email" name="email" value="<%= form.email || '' %>" required autocomplete="email" placeholder="you@example.com"></label>
+        <label>Phone / WhatsApp<input name="phone" value="<%= form.phone || '' %>" autocomplete="tel" placeholder="05x-xxx-xxxx"></label>
+      </div>
+      <label>Password <span class="muted">(min 8 characters)</span><input type="password" name="password" minlength="8" required autocomplete="new-password"></label>
+      <button class="btn primary big">Create account &amp; continue</button>
+      <p class="muted small center">Already have an account? <a class="link" href="/account/signin?next=<%= encodeURIComponent(next) %>">Sign in</a></p>
+    </form>
+    <% } else { %>
+    <form method="post" action="/account/signin" class="stack">
+      <input type="hidden" name="next" value="<%= next %>">
+      <label>Email<input type="email" name="email" value="<%= form.email || '' %>" required autofocus autocomplete="email" placeholder="you@example.com"></label>
+      <label>Password<input type="password" name="password" required autocomplete="current-password"></label>
+      <button class="btn primary big">Sign in</button>
+      <p class="muted small center">New here? <a class="link" href="/account/signin?mode=signup&next=<%= encodeURIComponent(next) %>">Create an account</a></p>
+    </form>
+    <% } %>
+
+    <% if (settings.whatsapp) { %>
+    <div class="auth-alt">
+      <span class="muted small">Prefer to skip the account?</span>
+      <a class="btn ghost small" target="_blank" rel="noopener" href="https://wa.me/<%= settings.whatsapp.replace(/\D/g,'') %>?text=<%= encodeURIComponent('Hi! I would like to book a shoot.') %>">Book on WhatsApp</a>
+    </div>
+    <% } %>
+  </div>
+</section>
+
+<%- include('../partials/foot') %>

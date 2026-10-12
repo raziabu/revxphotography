@@ -1,0 +1,12 @@
+<%- include('../partials/head', { noindex: true }) %>
+<section class="auth-card">
+  <p class="eyebrow">Admin</p>
+  <h1>Sign in</h1>
+  <% if (error) { %><div class="notice error"><%= error %></div><% } %>
+  <form method="post" action="/admin/login" class="stack">
+    <input type="hidden" name="next" value="<%= next %>">
+    <label>Password<input type="password" name="password" autofocus required autocomplete="current-password"></label>
+    <button class="btn primary">Sign in</button>
+  </form>
+</section>
+<%- include('../partials/foot') %>

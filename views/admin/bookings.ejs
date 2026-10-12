@@ -1,0 +1,50 @@
+<%- include('../partials/head', { admin: true, noindex: true }) %>
+<% const statusLabel = { new: 'New', confirmed: 'Confirmed', declined: 'Declined', done: 'Done' }; %>
+
+<div class="admin-head">
+  <div>
+    <h1>Bookings</h1>
+    <p class="muted">Requests sent from the "Book a shoot" form. Confirm or decline, and add a note the client will see in their account.</p>
+  </div>
+</div>
+
+<% if (!bookings.length) { %>
+  <div class="empty"><p>No booking requests yet. They arrive here when a visitor signs in and books.</p></div>
+<% } else { %>
+<div class="stack">
+  <% bookings.forEach((b) => { %>
+  <div class="card booking-admin <%= b.status %>">
+    <div class="booking-main">
+      <div class="booking-head">
+        <span class="badge <%= b.status %>"><%= statusLabel[b.status] || b.status %></span>
+        <strong><%= b.service %></strong> · <%= b.car %>
+        <% if (b.package_name) { %><span class="pkg-tag"><%= b.package_name %><% if (b.estimate_cents) { %> · <%= money(b.estimate_cents, settings.currency || 'ILS') %><% } %></span><% } %>
+        <span class="muted small">· <%= new Date(b.created_at + 'Z').toLocaleString('en-GB') %></span>
+      </div>
+      <div class="booking-client">
+        <strong><%= b.client_name %></strong>
+        <a href="mailto:<%= b.client_email %>"><%= b.client_email %></a>
+        <% if (b.client_phone) { %>
+          <a href="tel:<%= b.client_phone.replace(/[^\d+]/g,'') %>"><%= b.client_phone %></a>
+          <a target="_blank" rel="noopener" href="https://wa.me/<%= b.client_phone.replace(/\D/g,'').replace(/^0/, '972') %>?text=<%= encodeURIComponent(`Hi ${b.client_name.split(' ')[0]}, about your ${b.service.toLowerCase()} booking for the ${b.car}:`) %>">WhatsApp ↗</a>
+        <% } %>
+      </div>
+      <div class="muted small"><% if (b.preferred_date) { %>Preferred date: <strong><%= b.preferred_date %></strong> · <% } %><% if (b.location) { %>Location: <%= b.location %><% } %></div>
+      <% if (b.message) { %><p class="booking-msg"><%= b.message %></p><% } %>
+    </div>
+    <form class="booking-actions" method="post" action="/admin/bookings/<%= b.id %>/status">
+      <input name="note" value="<%= b.admin_note %>" placeholder="Note to client (e.g. Saturday 17:30 works, 600 ILS)">
+      <div class="actions">
+        <button class="btn small primary" name="status" value="confirmed">Confirm</button>
+        <button class="btn small" name="status" value="done">Done</button>
+        <button class="btn small ghost" name="status" value="declined">Decline</button>
+        <button class="btn small ghost" name="status" value="new">Reset</button>
+      </div>
+    </form>
+    <form method="post" action="/admin/bookings/<%= b.id %>/delete" data-confirm="Delete this booking request?" class="booking-delete"><button class="linklike small danger-text">Delete</button></form>
+  </div>
+  <% }) %>
+</div>
+<% } %>
+
+<%- include('../partials/foot') %>

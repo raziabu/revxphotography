@@ -1,0 +1,71 @@
+<%- include('../partials/head', { admin: true, noindex: true }) %>
+
+<div class="admin-head">
+  <div>
+    <h1>Packages</h1>
+    <p class="muted">The deals shown on the homepage and in the booking form. One feature per line. The "Build your own" calculator derives its prices from these packages.</p>
+  </div>
+  <button class="btn primary" data-toggle="#new-package">+ New package</button>
+</div>
+
+<% if (error) { %><div class="notice error"><%= error %></div><% } %>
+
+<form id="new-package" class="card stack" method="post" action="/admin/packages" hidden>
+  <h2>New package</h2>
+  <div class="row">
+    <label>Name<input name="name" placeholder="REV X EVENT" required></label>
+    <label>Price<div class="inline"><input name="price" type="number" step="0.01" min="0" placeholder="0" required><input name="currency" value="ILS" maxlength="3" class="narrow" style="text-transform:uppercase"></div></label>
+  </div>
+  <label>What's included <span class="muted">(one per line)</span><textarea name="features" rows="3" placeholder="Car photography&#10;20 edited photos"></textarea></label>
+  <div class="row">
+    <label>Badge <span class="muted">(optional, e.g. Best value)</span><input name="badge" maxlength="30"></label>
+    <label>Edited photos included <span class="muted">(for the calculator)</span><input name="included_photos" type="number" min="0" value="0"></label>
+  </div>
+  <label class="check"><input type="checkbox" name="includes_video"> Includes a cinematic video</label>
+  <div class="actions"><button class="btn primary">Add package</button></div>
+</form>
+
+<div class="two-col packages-admin">
+  <section class="stack">
+    <% packages.forEach((p, idx) => { %>
+    <form class="card stack package-edit <%= p.active ? '' : 'inactive' %>" method="post" action="/admin/packages/<%= p.id %>">
+      <div class="row">
+        <label>Name<input name="name" value="<%= p.name %>" required></label>
+        <label>Price<div class="inline"><input name="price" type="number" step="0.01" min="0" value="<%= (p.price_cents/100).toFixed(p.price_cents % 100 ? 2 : 0) %>" required><input name="currency" value="<%= p.currency %>" maxlength="3" class="narrow" style="text-transform:uppercase"></div></label>
+      </div>
+      <label>What's included <span class="muted">(one per line)</span><textarea name="features" rows="3"><%= p.features %></textarea></label>
+      <div class="row">
+        <label>Badge<input name="badge" value="<%= p.badge %>" maxlength="30" placeholder="Best value / Most popular"></label>
+        <label>Edited photos included<input name="included_photos" type="number" min="0" value="<%= p.included_photos %>"></label>
+      </div>
+      <div class="actions">
+        <label class="check"><input type="checkbox" name="includes_video" <%= p.includes_video ? 'checked' : '' %>> Includes a cinematic video</label>
+        <label class="check"><input type="checkbox" name="active" <%= p.active ? 'checked' : '' %>> Shown on the website</label>
+      </div>
+      <div class="actions">
+        <button class="btn primary small">Save</button>
+        <button class="btn ghost small" formaction="/admin/packages/<%= p.id %>/move" name="dir" value="up" <%= idx === 0 ? 'disabled' : '' %>>↑</button>
+        <button class="btn ghost small" formaction="/admin/packages/<%= p.id %>/move" name="dir" value="down" <%= idx === packages.length - 1 ? 'disabled' : '' %>>↓</button>
+        <button class="linklike small danger-text" formaction="/admin/packages/<%= p.id %>/delete" onclick="return confirm('Delete <%= p.name.replace(/'/g, '') %>?')">Delete</button>
+      </div>
+    </form>
+    <% }) %>
+  </section>
+
+  <aside class="stack">
+    <form class="card stack" method="post" action="/admin/packages/calculator">
+      <h2>"Build your own" add-ons</h2>
+      <p class="muted small">A custom deal is one of the packages above as the base, plus extras. Set what each extra costs:</p>
+      <label>Price per extra edited photo<input name="extra_photo" type="number" step="0.01" min="0" value="<%= (calc.extraPhotoCents/100).toFixed(calc.extraPhotoCents % 100 ? 2 : 0) %>"></label>
+      <label>Price per extra cinematic video<input name="extra_video" type="number" step="0.01" min="0" value="<%= (calc.extraVideoCents/100).toFixed(calc.extraVideoCents % 100 ? 2 : 0) %>"></label>
+      <div class="row">
+        <label>Max extra photos<input name="max_extra_photos" type="number" min="1" max="200" value="<%= calc.maxExtraPhotos %>"></label>
+        <label>Max extra videos<input name="max_extra_videos" type="number" min="1" max="10" value="<%= calc.maxExtraVideos %>"></label>
+      </div>
+      <p class="muted small">Example: <%= calc.packages[0] ? `${calc.packages[0].name} + 10 photos + 1 video = ${money(calc.packages[0].price_cents + 10 * calc.extraPhotoCents + calc.extraVideoCents, calc.currency)}` : '' %></p>
+      <div class="actions"><button class="btn">Save add-on prices</button></div>
+    </form>
+  </aside>
+</div>
+
+<%- include('../partials/foot') %>
