@@ -30,7 +30,6 @@ cd /srv/revx
 if [ ! -f .env ]; then
   cat > .env <<EOF
 DOMAIN=${DOMAIN}
-MAX_UPLOAD_MB=8192
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 EOF

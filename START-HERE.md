@@ -31,5 +31,5 @@ The Mercedes album currently on the site is a placeholder made with AI renders s
 ## If something breaks
 
 - The site won't start: make sure Node.js 22.13 or newer is installed (`node --version`).
-- Uploads fail on a server: check disk space and that the upload size limit (`MAX_UPLOAD_MB`) is big enough.
+- Uploads fail on a server: check disk space and the proxy's per-request body limit. The resumable Tus endpoint supports files up to 200 GB as long as each chunk fits within that limit.
 - Lost the admin password: stop the site, delete the line `admin_password_hash` from the settings table in `data/studio.sqlite` (any SQLite tool), start it, and the setup page asks for a new password.

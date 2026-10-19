@@ -14,10 +14,12 @@ import { kindOf, processUpload, removeFileArtifacts, derivedPath, uploadPath, em
 import { requireAdmin, signIn, signOut, isAdmin, loginLimiter } from './auth.js';
 import { Bookings, Packages } from './db.js';
 import { clientRouter, loadClient } from './clients.js';
+import tusUploads from './tus-uploads.js';
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
-const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB || 4096);
+const MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024;
+const MAX_UPLOAD_MB = MAX_UPLOAD_BYTES / (1024 * 1024);
 // cache-buster for style.css / app.js: changes whenever those files change
 const ASSET_VERSION = ['style.css', 'app.js']
   .map((f) => { try { return Math.floor(fs.statSync(path.join(PUBLIC_DIR, f)).mtimeMs); } catch { return 0; } })
@@ -73,9 +75,10 @@ app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), (req, re
 });
 
 // ---------- middleware ----------
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
 app.use(cookieParser());
+app.use(tusUploads);
+app.use(express.urlencoded({ limit: '2000mb', extended: true }));
+app.use(express.json({ limit: '2000mb' }));
 app.use(express.static(PUBLIC_DIR, { maxAge: '1h' }));
 app.use((req, res, next) => {
   res.locals.settings = allSettings();
@@ -98,7 +101,7 @@ const storage = multer.diskStorage({
   destination: UPLOADS_DIR,
   filename: (_req, file, cb) => cb(null, `${newId(12)}${path.extname(file.originalname).toLowerCase()}`),
 });
-const upload = multer({ storage, limits: { fileSize: MAX_UPLOAD_MB * 1024 * 1024, files: 300 } });
+const upload = multer({ storage, limits: { fileSize: MAX_UPLOAD_BYTES, files: 300 } });
 
 // ---------- first-run setup ----------
 app.get('/setup', (req, res) => {
@@ -661,9 +664,14 @@ app.use('/admin', admin);
 app.use((req, res) => res.status(404).render('error', { title: 'Not found', code: 404, message: 'That page does not exist.' }));
 app.use((err, req, res, _next) => {
   console.error(err);
+  if (err.type === 'entity.too.large') {
+    const msg = 'Request too large (limit 2000 MB)';
+    return wantsJson(req) ? res.status(413).json({ error: msg }) : res.status(413).render('error', { title: 'Request too large', code: 413, message: msg });
+  }
   if (err instanceof multer.MulterError) {
     const msg = err.code === 'LIMIT_FILE_SIZE' ? `File too large (limit ${MAX_UPLOAD_MB} MB)` : err.message;
-    return wantsJson(req) ? res.status(400).json({ error: msg }) : res.status(400).render('error', { title: 'Upload error', code: 400, message: msg });
+    const status = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    return wantsJson(req) ? res.status(status).json({ error: msg }) : res.status(status).render('error', { title: 'Upload error', code: status, message: msg });
   }
   if (wantsJson(req)) return res.status(500).json({ error: 'Server error' });
   res.status(500).render('error', { title: 'Error', code: 500, message: 'Something went wrong.' });

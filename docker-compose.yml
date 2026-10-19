@@ -7,7 +7,7 @@ services:
       - DATA_DIR=/data
       - BASE_URL=https://${DOMAIN}
       - COOKIE_SECURE=1
-      - MAX_UPLOAD_MB=${MAX_UPLOAD_MB:-8192}
+      - TUS_CORS_ORIGINS=${TUS_CORS_ORIGINS:-}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
     volumes:

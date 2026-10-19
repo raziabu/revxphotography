@@ -52,8 +52,8 @@ function watermarkSvg(w, h, text) {
   );
 }
 
-async function renderImage(inputBuffer, outPath, maxSize, watermarkText) {
-  let img = sharp(inputBuffer, { failOn: 'none' }).rotate().resize({ width: maxSize, height: maxSize, fit: 'inside', withoutEnlargement: true });
+async function renderImage(inputPath, outPath, maxSize, watermarkText) {
+  let img = sharp(inputPath, { failOn: 'none' }).rotate().resize({ width: maxSize, height: maxSize, fit: 'inside', withoutEnlargement: true });
   if (watermarkText) {
     const meta = await img.toBuffer({ resolveWithObject: true });
     img = sharp(meta.data).composite([{ input: watermarkSvg(meta.info.width, meta.info.height, watermarkText) }]);
@@ -79,24 +79,24 @@ function extractPoster(videoPath, outPath) {
  */
 export async function processUpload({ id, filename, kind, watermarkText }) {
   const src = uploadPath(filename);
-  let sourceBuffer = null;
+  let sourcePath = null;
 
   if (kind === 'image') {
-    sourceBuffer = await fs.promises.readFile(src);
+    sourcePath = src;
   } else if (kind === 'video') {
     const poster = posterPath(id);
     const ok = await extractPoster(src, poster);
-    if (ok) sourceBuffer = await fs.promises.readFile(poster);
+    if (ok) sourcePath = poster;
   }
 
-  if (!sourceBuffer) return { width: null, height: null, has_preview: false };
+  if (!sourcePath) return { width: null, height: null, has_preview: false };
 
   try {
-    const meta = await sharp(sourceBuffer, { failOn: 'none' }).rotate().metadata();
+    const meta = await sharp(sourcePath, { failOn: 'none' }).rotate().metadata();
     await Promise.all([
-      renderImage(sourceBuffer, derivedPath(id, 'thumb'), SIZES.thumb, null),
-      renderImage(sourceBuffer, derivedPath(id, 'large'), SIZES.large, null),
-      renderImage(sourceBuffer, derivedPath(id, 'wm'), SIZES.wm, watermarkText),
+      renderImage(sourcePath, derivedPath(id, 'thumb'), SIZES.thumb, null),
+      renderImage(sourcePath, derivedPath(id, 'large'), SIZES.large, null),
+      renderImage(sourcePath, derivedPath(id, 'wm'), SIZES.wm, watermarkText),
     ]);
     return { width: meta.width ?? null, height: meta.height ?? null, has_preview: true };
   } catch (err) {

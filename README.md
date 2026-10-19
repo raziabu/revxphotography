@@ -6,7 +6,7 @@ A self-hosted website for a photographer / videographer:
 
 - **Public portfolio** — albums (one shoot = one album with a cover and its own page) plus single shots. Upload photos and clips, or paste YouTube / Vimeo links. Category filters, lightbox, scroll-reveal animations, contact section.
 - **Scroll-driven hero** — a car that rotates through 360° as the visitor scrolls (frame sequence in `public/car/`, see below).
-- **Private client galleries** — each gallery gets a secret link. The client sees watermarked previews until payment is confirmed, then can download every original file (individually or as one zip).
+- **Private client galleries** — each gallery gets a secret link. The client sees watermarked previews until payment is confirmed, then can download every original file (individually or as one zip). Admin uploads support files up to 2 GiB with the standard form, or up to 200 GB using the resumable Tus endpoint.
 - **Public or private galleries** — a client gallery is private (link only) by default. Mark it public and it appears on the homepage under the client's name as a view-only page (no downloads).
 - **Packages** — deals shown on the homepage (seeded with REV X SIGNATURE / CINEMATIC / ULTIMATE) and editable under Admin → Packages. A "Build your own" card lets a client start from any package and add extra photos or videos at per-unit prices you set; the estimate is attached to their booking request.
 - **Client accounts & bookings** — every "Book a shoot" button leads to a sign-in / create-account page, then a booking form (service, car, date, location, notes). Clients get a "My account" page with their booking status, the photographer's notes, and any galleries made for their email. The admin sees requests under Admin → Bookings and can confirm, decline, or add a note.
@@ -34,6 +34,43 @@ Then go to **Admin → Settings** to fill in contact details, currency and payme
 5. **Packages**: Admin → Packages to change names, prices, included items, badge (e.g. Best value), order, and the add-on prices for the custom builder.
 6. **Bookings**: Admin → Bookings shows new requests (with a count in the nav). Confirm with a note like "Saturday 17:00, 650 ILS"; the client sees it in their account. Link galleries to a client by using the same email in the gallery's *Client email* field.
 7. Need to revoke access? **New link** invalidates the old one; **Lock again** turns downloads off.
+
+### Resumable large uploads
+
+For files larger than 2 GiB, use the Tus 1.0 endpoint
+`POST /admin/galleries/:galleryId/uploads`. It is scoped to an existing gallery and
+requires an authenticated admin session. The endpoint supports Tus creation,
+`HEAD` offset checks, resumable `PATCH` requests, termination with `DELETE`, and
+uploads up to 200,000,000,000 bytes. Completed files are added to the gallery
+automatically. Incomplete uploads are stored under `data/tus/` and expire seven
+days after creation or their latest `PATCH`, whichever is later; completed media
+stays in `data/uploads/`.
+
+For example, a browser client using `tus-js-client` can upload in 64 MiB chunks
+and resume after a network interruption:
+
+```js
+import * as tus from 'tus-js-client';
+
+const upload = new tus.Upload(file, {
+  endpoint: `/admin/galleries/${galleryId}/uploads`,
+  chunkSize: 64 * 1024 * 1024,
+  withCredentials: true,
+  metadata: { filename: file.name },
+  onError: (error) => console.error(error),
+  onProgress: (sent, total) => console.log(sent, total),
+  onSuccess: () => console.log('Upload complete'),
+});
+upload.start();
+```
+
+Same-origin requests work by default. For a separate but same-site browser
+origin, set `TUS_CORS_ORIGINS` to a comma-separated allowlist of exact origins
+(including scheme and port if present), and enable credentials in the Tus
+client. The reverse-proxy body-size limit applies to each `PATCH` chunk, not the
+total Tus upload; use chunks smaller than that limit. The app disables Node
+request and socket timeouts for long transfers. Ensure the data volume has enough
+free space for both the completed files and any in-progress uploads.
 
 ## The rotating car hero
 
@@ -66,6 +103,10 @@ yourdomain.com {
 }
 ```
 
+The proxy's `max_size` limits an individual Tus `PATCH` request; it does not
+limit the full resumable upload. The app's Docker Caddy configuration allows
+8 GB per request.
+
 Back up the `data/` folder — it holds the database, originals and previews.
 
 ### Stripe
@@ -77,6 +118,7 @@ Back up the `data/` folder — it holds the database, originals and previews.
 
 ```
 src/server.js   routes (public, client galleries, admin, Stripe)
+src/tus-uploads.js   Tus 1.0 resumable uploads for admin galleries
 src/db.js       SQLite schema and queries
 src/media.js    thumbnails, watermarked previews, video posters, embed parsing
 src/auth.js     admin cookie session
