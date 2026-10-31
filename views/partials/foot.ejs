@@ -1,6 +1,10 @@
 </main>
 <footer class="footer">
-  <span>© <%= new Date().getFullYear() %> <%= settings.studio_name || 'Studio' %></span>
+  <div class="footer-copy">
+    <p>© 2026 RevX Photography. All rights reserved.</p>
+    <p>All photographs are protected by copyright. Unauthorized copying, reproduction, or commercial use without permission is prohibited.</p>
+    <a href="/copyright">Copyright &amp; Image Usage Policy</a>
+  </div>
   <% if (!(typeof admin !== 'undefined' && admin)) { %>
     <span class="muted"><%= settings.tagline || "Photography & film" %></span>
   <% } %>

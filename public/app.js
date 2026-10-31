@@ -126,28 +126,88 @@
     const bar = zone.querySelector('.bar');
     const text = zone.querySelector('.progress-text');
     const url = zone.dataset.uploader;
-
-    const uploadOne = (file, i, total) => new Promise((resolve, reject) => {
-      const fd = new FormData();
-      fd.append('files', file, file.name);
+    const CHUNK_SIZE = 64 * 1024 * 1024;
+    const TUS_VERSION = '1.0.0';
+    const storageKey = (file) => `tus:${url}:${JSON.stringify([file.name, file.size, file.lastModified])}`;
+    const metadataValue = (value) => {
+      const bytes = new TextEncoder().encode(value);
+      return btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(''));
+    };
+    const requestHeaders = { 'Tus-Resumable': TUS_VERSION };
+    const getOffset = async (uploadUrl) => {
+      const response = await fetch(uploadUrl, { method: 'HEAD', headers: requestHeaders, credentials: 'same-origin' });
+      if (!response.ok) throw Object.assign(new Error(`Could not resume upload (${response.status})`), { status: response.status });
+      return Number(response.headers.get('Upload-Offset'));
+    };
+    const createUpload = async (file) => {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...requestHeaders,
+          'Upload-Length': String(file.size),
+          'Upload-Metadata': `filename ${metadataValue(file.name)}`,
+        },
+        credentials: 'same-origin',
+      });
+      if (!response.ok) throw new Error(`Could not start upload (${response.status})`);
+      const uploadUrl = new URL(response.headers.get('Location'), location.href).href;
+      localStorage.setItem(storageKey(file), uploadUrl);
+      return uploadUrl;
+    };
+    const patchChunk = (uploadUrl, file, offset, start, total) => new Promise((resolve, reject) => {
+      const end = Math.min(offset + CHUNK_SIZE, file.size);
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', url);
-      xhr.setRequestHeader('Accept', 'application/json');
-      xhr.upload.onprogress = (ev) => {
-        if (!ev.lengthComputable) return;
-        const pct = Math.round(((i + ev.loaded / ev.total) / total) * 100);
-        bar.style.width = pct + '%';
-        text.textContent = `Uploading ${i + 1} of ${total}: ${file.name} (${pct}%)`;
+      xhr.open('PATCH', uploadUrl);
+      xhr.setRequestHeader('Tus-Resumable', TUS_VERSION);
+      xhr.setRequestHeader('Upload-Offset', String(offset));
+      xhr.setRequestHeader('Content-Type', 'application/offset+octet-stream');
+      xhr.withCredentials = true;
+      xhr.upload.onprogress = (event) => {
+        const sent = Math.min(offset + event.loaded, file.size);
+        const pct = Math.round(((start + sent / file.size) / total) * 100);
+        bar.style.width = `${pct}%`;
+        text.textContent = `Uploading ${start + 1} of ${total}: ${file.name} (${pct}%)`;
       };
       xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) return resolve();
-        let msg = `Upload failed (${xhr.status})`;
-        try { msg = JSON.parse(xhr.responseText).error || msg; } catch { /* ignore */ }
-        reject(new Error(msg));
+        if (xhr.status === 204) return resolve();
+        reject(Object.assign(new Error(`Upload chunk failed (${xhr.status})`), { status: xhr.status }));
       };
       xhr.onerror = () => reject(new Error('Network error during upload'));
-      xhr.send(fd);
+      xhr.onabort = () => reject(new Error('Upload was interrupted'));
+      xhr.send(file.slice(offset, end));
     });
+    const uploadOne = async (file, i, total) => {
+      const key = storageKey(file);
+      let uploadUrl = localStorage.getItem(key);
+      let offset;
+      if (uploadUrl) {
+        try {
+          offset = await getOffset(uploadUrl);
+        } catch (error) {
+          if (error.status !== 404) throw error;
+          localStorage.removeItem(key);
+          uploadUrl = null;
+        }
+      }
+      if (!uploadUrl) {
+        uploadUrl = await createUpload(file);
+        offset = await getOffset(uploadUrl);
+      }
+      let retries = 0;
+      while (offset < file.size) {
+        try {
+          await patchChunk(uploadUrl, file, offset, i, total);
+          offset = await getOffset(uploadUrl);
+          retries = 0;
+        } catch (error) {
+          if (error.status && error.status !== 409) throw error;
+          if (++retries > 8) throw error;
+          await new Promise((resolve) => setTimeout(resolve, Math.min(1000 * (2 ** (retries - 1)), 30000)));
+          offset = await getOffset(uploadUrl);
+        }
+      }
+      localStorage.removeItem(key);
+    };
 
     const run = async (files) => {
       if (!files.length) return;
@@ -159,9 +219,14 @@
         try { await uploadOne(list[i], i, list.length); }
         catch (err) { errors.push(`${list[i].name}: ${err.message}`); }
       }
-      text.textContent = errors.length ? `Done with ${errors.length} error(s)` : 'Done! Refreshing…';
-      if (errors.length) alert(errors.join('\n'));
-      location.reload();
+      if (errors.length) {
+        text.textContent = `Upload failed for ${errors.length} file(s). Retry by selecting them again.`;
+        alert(errors.join('\n'));
+        location.reload();
+      } else {
+        text.textContent = 'Done! Refreshing…';
+        location.reload();
+      }
     };
 
     input.addEventListener('change', () => run(input.files));

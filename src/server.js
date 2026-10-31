@@ -148,6 +148,10 @@ app.get('/', (req, res) => {
   res.render('home', { title: getSetting('studio_name', 'Studio'), albums, items, categories, hasHero, clients, packages: Packages.active(), calc: Packages.calculator() });
 });
 
+app.get('/copyright', (_req, res) => {
+  res.render('copyright', { title: 'Copyright & Image Usage Policy' });
+});
+
 // Public, view-only version of a client gallery (no downloads; that stays on the private link)
 app.get('/clients/:slug', (req, res) => {
   const gallery = Galleries.byPublicSlug(req.params.slug);

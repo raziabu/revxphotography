@@ -53,7 +53,12 @@ hr { border: 0; border-top: 1px solid var(--line); margin: .4rem 0; }
 .topnav a, .topnav .linklike { padding: 8px 12px; border-radius: 999px; color: var(--muted); font-size: .9rem; }
 .topnav a:hover, .topnav a.active { color: var(--text); background: var(--bg-3); }
 .topnav .pill { border: 1px solid var(--accent); color: var(--accent); }
-.footer { max-width: 1240px; margin: 0 auto; padding: 24px 20px 40px; display: flex; justify-content: space-between; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); }
+.footer { max-width: 1240px; margin: 0 auto; padding: 24px 20px 40px; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); }
+.footer-copy p { margin: 0 0 6px; line-height: 1.55; }
+.footer-copy a { color: var(--muted); }
+.footer-copy a:hover { color: var(--text); }
+.policy-copy { max-width: 760px; margin: 0 auto 12vh; color: var(--muted); line-height: 1.75; }
+.policy-copy p + p { margin-top: 1.25em; }
 .flash { max-width: 1200px; margin: 16px auto 0; padding: 12px 16px; border-radius: 10px; background: color-mix(in srgb, var(--ok) 14%, var(--bg-2)); border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent); color: #d7f5e3; }
 .notice { padding: 12px 16px; border-radius: 10px; background: var(--bg-3); border: 1px solid var(--line); margin: 0 0 16px; }
 .notice.success { background: color-mix(in srgb, var(--ok) 14%, var(--bg-2)); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
@@ -406,3 +411,4 @@ input[type=color] { width: 56px; height: 36px; padding: 2px; border-radius: 8px;
 /* public pages: originals are never served here, and we make casual saving a little harder */
 [data-protect] img { -webkit-user-drag: none; user-select: none; }
 @media (max-width: 900px) { .brand-logo { height: 28px; } }
+@media (max-width: 560px) { .footer { flex-direction: column; gap: 10px; padding: 20px 20px 32px; } }

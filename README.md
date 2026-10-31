@@ -6,7 +6,7 @@ A self-hosted website for a photographer / videographer:
 
 - **Public portfolio** — albums (one shoot = one album with a cover and its own page) plus single shots. Upload photos and clips, or paste YouTube / Vimeo links. Category filters, lightbox, scroll-reveal animations, contact section.
 - **Scroll-driven hero** — a car that rotates through 360° as the visitor scrolls (frame sequence in `public/car/`, see below).
-- **Private client galleries** — each gallery gets a secret link. The client sees watermarked previews until payment is confirmed, then can download every original file (individually or as one zip). Admin uploads support files up to 2 GiB with the standard form, or up to 200 GB using the resumable Tus endpoint.
+- **Private client galleries** — each gallery gets a secret link. The client sees watermarked previews until payment is confirmed, then can download every original file (individually or as one zip). The gallery Admin page uploads files up to 200 GB using resumable Tus chunks.
 - **Public or private galleries** — a client gallery is private (link only) by default. Mark it public and it appears on the homepage under the client's name as a view-only page (no downloads).
 - **Packages** — deals shown on the homepage (seeded with REV X SIGNATURE / CINEMATIC / ULTIMATE) and editable under Admin → Packages. A "Build your own" card lets a client start from any package and add extra photos or videos at per-unit prices you set; the estimate is attached to their booking request.
 - **Client accounts & bookings** — every "Book a shoot" button leads to a sign-in / create-account page, then a booking form (service, car, date, location, notes). Clients get a "My account" page with their booking status, the photographer's notes, and any galleries made for their email. The admin sees requests under Admin → Bookings and can confirm, decline, or add a note.
@@ -37,12 +37,12 @@ Then go to **Admin → Settings** to fill in contact details, currency and payme
 
 ### Resumable large uploads
 
-For files larger than 2 GiB, use the Tus 1.0 endpoint
-`POST /admin/galleries/:galleryId/uploads`. It is scoped to an existing gallery and
+The gallery Admin upload area uses the Tus 1.0 endpoint
+`POST /admin/galleries/:galleryId/uploads` for all its files. It is scoped to an existing gallery and
 requires an authenticated admin session. The endpoint supports Tus creation,
 `HEAD` offset checks, resumable `PATCH` requests, termination with `DELETE`, and
 uploads up to 200,000,000,000 bytes. Completed files are added to the gallery
-automatically. Incomplete uploads are stored under `data/tus/` and expire seven
+automatically. Incomplete uploads are stored under `data/tus/` and expire thirty
 days after creation or their latest `PATCH`, whichever is later; completed media
 stays in `data/uploads/`.
 

@@ -11,7 +11,7 @@ import { kindOf, processUpload } from './media.js';
 import { requireAdmin } from './auth.js';
 
 const MAX_UPLOAD_BYTES = 200_000_000_000;
-const UPLOAD_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const UPLOAD_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const TUS_DIR = path.join(DATA_DIR, 'tus');
 const TUS_VERSION = '1.0.0';
 const ALLOWED_METHODS = 'OPTIONS, POST, HEAD, PATCH, DELETE';
