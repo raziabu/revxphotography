@@ -64,13 +64,16 @@ const upload = new tus.Upload(file, {
 upload.start();
 ```
 
-Same-origin requests work by default. For a separate but same-site browser
-origin, set `TUS_CORS_ORIGINS` to a comma-separated allowlist of exact origins
-(including scheme and port if present), and enable credentials in the Tus
-client. The reverse-proxy body-size limit applies to each `PATCH` chunk, not the
-total Tus upload; use chunks smaller than that limit. The app disables Node
-request and socket timeouts for long transfers. Ensure the data volume has enough
-free space for both the completed files and any in-progress uploads.
+Same-origin requests work by default. `BASE_URL` is also accepted as an exact
+Tus origin, which supports HTTPS deployments behind a reverse proxy. For
+additional browser origins, set `TUS_CORS_ORIGINS` to a comma-separated
+allowlist of exact origins (including scheme and port if present). The gallery
+Tus endpoint supports files up to 200 GB; it does not use Multer or Express body
+parsers. The reverse-proxy body-size limit applies to each `PATCH` chunk, not
+the total Tus upload; the browser sends 64 MiB chunks by default. The app
+disables Node request and socket timeouts for long transfers. Ensure the data
+volume has enough free space for both the completed files and any in-progress
+uploads.
 
 ## The rotating car hero
 

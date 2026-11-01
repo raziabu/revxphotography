@@ -17,6 +17,19 @@ const TUS_VERSION = '1.0.0';
 const ALLOWED_METHODS = 'OPTIONS, POST, HEAD, PATCH, DELETE';
 const ALLOWED_HEADERS = 'Tus-Resumable, Upload-Length, Upload-Metadata, Upload-Offset, Upload-Defer-Length, Content-Type, Authorization';
 const EXPOSED_HEADERS = 'Tus-Resumable, Tus-Version, Tus-Extension, Tus-Max-Size, Upload-Offset, Upload-Length, Upload-Metadata, Upload-Expires, Location';
+const allowedOrigins = new Set(
+  (process.env.TUS_CORS_ORIGINS || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean),
+);
+if (process.env.BASE_URL) {
+  try {
+    allowedOrigins.add(new URL(process.env.BASE_URL).origin);
+  } catch {
+    throw new Error('BASE_URL must be an absolute URL');
+  }
+}
 const locks = new Map();
 
 fs.mkdirSync(TUS_DIR, { recursive: true });
@@ -79,6 +92,27 @@ function setTusHeaders(res) {
 
 function sendTusError(res, status, message) {
   return res.status(status).type('text/plain').send(message);
+}
+
+function logUploadRequest(req, reason) {
+  const headers = { ...req.headers };
+  for (const name of ['authorization', 'cookie', 'proxy-authorization', 'set-cookie', 'x-api-key']) {
+    if (name in headers) headers[name] = '[REDACTED]';
+  }
+  const details = () => ({
+    method: req.method,
+    url: req.originalUrl,
+    headers,
+    reqOrigin: req.origin ?? null,
+    originHeader: req.get('Origin') ?? null,
+  });
+  const writeLog = (message) => console.warn('[Tus upload]', JSON.stringify({ ...details(), reason: message }));
+  writeLog(reason || 'Request received; checking admin authentication');
+  if (!reason) {
+    res.on('finish', () => {
+      if (res.statusCode === 401) writeLog('401 Unauthorized: requireAdmin rejected the request because there is no valid admin session');
+    });
+  }
 }
 
 function parseMetadata(header) {
@@ -186,12 +220,9 @@ router.use(basePath, (req, res, next) => {
   res.vary('Origin');
   const origin = req.get('Origin');
   if (origin) {
-    const configuredOrigins = (process.env.TUS_CORS_ORIGINS || '')
-      .split(',')
-      .map((value) => value.trim())
-      .filter(Boolean);
     const sameOrigin = origin === `${req.protocol}://${req.get('host')}`;
-    if (!sameOrigin && !configuredOrigins.includes(origin)) {
+    if (!sameOrigin && !allowedOrigins.has(origin)) {
+      logUploadRequest(req, `403 Forbidden: Origin "${origin}" is not the request origin and is not in TUS_CORS_ORIGINS or BASE_URL`);
       return sendTusError(res, 403, 'Origin is not allowed');
     }
     res.set({
@@ -207,7 +238,10 @@ router.use(basePath, (req, res, next) => {
   next();
 });
 
-router.post(basePath, requireAdmin, async (req, res) => {
+router.post(basePath, (req, res, next) => {
+  logUploadRequest(req);
+  requireAdmin(req, res, next);
+}, async (req, res) => {
   if (req.get('Tus-Resumable') !== TUS_VERSION) {
     res.set('Tus-Version', TUS_VERSION);
     return sendTusError(res, 412, 'Tus-Resumable must be 1.0.0');
