@@ -94,7 +94,7 @@ function sendTusError(res, status, message) {
   return res.status(status).type('text/plain').send(message);
 }
 
-function logUploadRequest(req, reason) {
+function logUploadRequest(req, reason, res) { 
   const headers = { ...req.headers };
   for (const name of ['authorization', 'cookie', 'proxy-authorization', 'set-cookie', 'x-api-key']) {
     if (name in headers) headers[name] = '[REDACTED]';
@@ -108,7 +108,7 @@ function logUploadRequest(req, reason) {
   });
   const writeLog = (message) => console.warn('[Tus upload]', JSON.stringify({ ...details(), reason: message }));
   writeLog(reason || 'Request received; checking admin authentication');
-  if (!reason) {
+  if (!reason && res) {
     res.on('finish', () => {
       if (res.statusCode === 401) writeLog('401 Unauthorized: requireAdmin rejected the request because there is no valid admin session');
     });
@@ -239,7 +239,7 @@ router.use(basePath, (req, res, next) => {
 });
 
 router.post(basePath, (req, res, next) => {
-  logUploadRequest(req);
+  logUploadRequest(req, undefined, res);
   requireAdmin(req, res, next);
 }, async (req, res) => {
   if (req.get('Tus-Resumable') !== TUS_VERSION) {
