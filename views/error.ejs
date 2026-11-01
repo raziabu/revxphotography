@@ -1,8 +1,19 @@
-<%- include('partials/head', { noindex: true }) %>
+<%- include('partials/head', {
+  noindex: true,
+  settings: typeof settings !== 'undefined' ? settings : {},
+  assetV: typeof assetV !== 'undefined' ? assetV : '',
+  path: typeof path !== 'undefined' ? path : '',
+  isAdmin: typeof isAdmin !== 'undefined' ? isAdmin : false,
+  flash: typeof flash !== 'undefined' ? flash : null
+}) %>
 <section class="hero center">
   <p class="eyebrow">Error <%= code %></p>
   <h1 class="display"><%= title %></h1>
   <p class="lede"><%= message %></p>
   <div class="hero-actions"><a class="btn ghost" href="/">Back to the site</a></div>
 </section>
-<%- include('partials/foot') %>
+<%- include('partials/foot', {
+  settings: typeof settings !== 'undefined' ? settings : {},
+  assetV: typeof assetV !== 'undefined' ? assetV : '',
+  admin: typeof admin !== 'undefined' ? admin : false
+}) %>

@@ -94,24 +94,36 @@ function sendTusError(res, status, message) {
   return res.status(status).type('text/plain').send(message);
 }
 
-function logUploadRequest(req, reason, res) { 
-  const headers = { ...req.headers };
-  for (const name of ['authorization', 'cookie', 'proxy-authorization', 'set-cookie', 'x-api-key']) {
-    if (name in headers) headers[name] = '[REDACTED]';
-  }
-  const details = () => ({
-    method: req.method,
-    url: req.originalUrl,
-    headers,
-    reqOrigin: req.origin ?? null,
-    originHeader: req.get('Origin') ?? null,
-  });
-  const writeLog = (message) => console.warn('[Tus upload]', JSON.stringify({ ...details(), reason: message }));
-  writeLog(reason || 'Request received; checking admin authentication');
-  if (!reason && res) {
-    res.on('finish', () => {
-      if (res.statusCode === 401) writeLog('401 Unauthorized: requireAdmin rejected the request because there is no valid admin session');
+function logUploadRequest(req, reason, res) {
+  try {
+    const headers = { ...req.headers };
+    for (const name of [
+      'authorization', 'cookie', 'proxy-authorization', 'set-cookie', 'x-api-key'
+    ]) {
+      if (name in headers) headers[name] = '[REDACTED]';
+    }
+
+    const details = () => ({
+      method: req.method,
+      url: req.originalUrl,
+      headers,
+      reqOrigin: req.origin ?? null,
+      originHeader: req.get('Origin') ?? null,
     });
+    const writeLog = (message) =>
+      console.warn('[Tus upload]', JSON.stringify({ ...details(), reason: message }));
+
+    writeLog(reason || 'Request received; checking admin authentication');
+
+    if (!reason && res) {
+      res.on('finish', () => {
+        if (res.statusCode === 401) {
+          writeLog('401 Unauthorized: requireAdmin rejected the request because there is no valid admin session');
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('Tus upload log error:', err.message);
   }
 }
 

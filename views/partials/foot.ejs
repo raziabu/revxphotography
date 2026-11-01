@@ -25,6 +25,6 @@
   <div class="lb-stage"></div>
   <div class="lb-caption"></div>
 </div>
-<script src="/app.js?v=<%= assetV %>"></script>
+<script src="/app.js?v=<%= typeof assetV !== 'undefined' ? assetV : '' %>"></script>
 </body>
 </html>
