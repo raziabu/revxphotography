@@ -23,7 +23,7 @@
     <% if (thumb) { %>
       <img src="<%= thumb %>" alt="<%= it.title %>" loading="lazy" onerror="this.remove()">
     <% } else if (it.kind === 'video') { %>
-      <video src="<%= src %>#t=0.5" preload="metadata" muted playsinline></video>
+      <div class="tile-fallback">▶</div>
     <% } else { %>
       <div class="tile-fallback">▶</div>
     <% } %>

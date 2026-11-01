@@ -1,4 +1,4 @@
-<%- include('partials/head') %>
+<%- include('partials/head', { assetv: (typeof assetv !== 'undefined' ? assetv : '') }) %>
 <%
   const tileData = (it) => {
     let type = it.kind, src = '', thumb = '';
@@ -97,7 +97,7 @@
       <% if (t.thumb) { %>
         <img src="<%= t.thumb %>" alt="<%= it.title %>" loading="lazy" onerror="this.remove()">
       <% } else if (it.kind === 'video') { %>
-        <video src="<%= t.src %>#t=0.5" preload="metadata" muted playsinline></video>
+        <div class="tile-fallback">▶</div>
       <% } else { %>
         <div class="tile-fallback">▶</div>
       <% } %>

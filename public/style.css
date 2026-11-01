@@ -222,9 +222,46 @@ form[hidden] { display: none; }
 /* lightbox */
 .lightbox { position: fixed; inset: 0; background: rgba(5,5,8,.94); z-index: 100; display: grid; place-items: center; }
 .lightbox[hidden] { display: none; }
-.lb-stage { max-width: 94vw; max-height: 86vh; display: grid; place-items: center; }
+.lb-stage { width: 100%; max-width: 94vw; max-height: 86vh; display: grid; place-items: center; }
 .lb-stage img, .lb-stage video { max-width: 94vw; max-height: 86vh; object-fit: contain; border-radius: 6px; }
 .lb-stage iframe { width: min(94vw, 1200px); aspect-ratio: 16 / 9; border: 0; border-radius: 6px; }
+.video-player {
+  position: relative; width: min(100%, 1280px); max-height: 86vh; overflow: hidden;
+  border: 1px solid rgba(255,255,255,.12); border-radius: 14px; background: #050507;
+  box-shadow: 0 28px 90px rgba(0,0,0,.55);
+}
+.video-player-media {
+  display: block; width: 100%; max-width: 100% !important; max-height: calc(86vh - 58px) !important;
+  aspect-ratio: 16 / 9; object-fit: contain; background: #050507; border-radius: 0 !important;
+}
+.video-player-status {
+  position: absolute; inset: 0 0 58px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 24px; color: #fff; text-align: center; pointer-events: none;
+  background: linear-gradient(135deg, rgba(5,5,7,.28), rgba(5,5,7,.62));
+}
+.video-player[data-state="ready"] .video-player-status { display: none; }
+.video-player[data-state="loading"] .video-player-message::before {
+  content: ""; display: block; width: 28px; height: 28px; margin: 0 auto 12px;
+  border: 2px solid rgba(255,255,255,.28); border-top-color: var(--accent); border-radius: 50%;
+  animation: video-player-spin .8s linear infinite;
+}
+@keyframes video-player-spin { to { transform: rotate(360deg); } }
+.video-player[data-state="error"] .video-player-status { background: rgba(5,5,7,.82); }
+.video-player-retry {
+  min-height: 44px; padding: 9px 18px; border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  border-radius: 999px; background: var(--accent); color: var(--accent-ink); font: inherit; font-weight: 600;
+  cursor: pointer; pointer-events: auto;
+}
+.video-player-retry[hidden] { display: none; }
+.video-player-speed {
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-height: 58px; padding: 8px 14px;
+  color: rgba(255,255,255,.72); font-size: .78rem; letter-spacing: .04em;
+  background: linear-gradient(180deg, #121216, #09090b);
+}
+.video-player-speed select {
+  min-width: 88px; min-height: 42px; padding: 7px 30px 7px 12px; border: 1px solid rgba(255,255,255,.18);
+  border-radius: 9px; background: #202027; color: #fff; font: inherit; font-size: .9rem; cursor: pointer;
+}
 .lb-caption { position: fixed; bottom: 18px; left: 0; right: 0; text-align: center; color: var(--muted); font-size: .85rem; display: flex; justify-content: center; gap: 14px; align-items: center; }
 .lb-caption a { color: var(--accent); }
 .lightbox button { position: fixed; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); color: #fff; width: 46px; height: 46px; border-radius: 50%; font-size: 1.6rem; line-height: 1; cursor: pointer; display: grid; place-items: center; }
@@ -232,6 +269,20 @@ form[hidden] { display: none; }
 .lb-close { top: 18px; right: 18px; }
 .lb-prev { left: 18px; top: 50%; transform: translateY(-50%); }
 .lb-next { right: 18px; top: 50%; transform: translateY(-50%); }
+@media (max-width: 600px) {
+  .lightbox { padding: 12px; overflow-x: hidden; overflow-y: auto; align-content: center; }
+  .lb-stage { width: 100%; max-width: 100%; min-width: 0; max-height: calc(100vh - 132px); max-height: calc(100dvh - 132px); }
+  .video-player { width: 100%; min-width: 0; max-width: 100%; max-height: calc(100vh - 132px); max-height: calc(100dvh - 132px); border-radius: 10px; }
+  .video-player-media { max-height: calc(100vh - 186px) !important; max-height: calc(100dvh - 186px) !important; }
+  .video-player-status { bottom: 54px; }
+  .video-player-speed { min-height: 54px; padding: 6px 10px; }
+  .video-player-speed select { min-height: 44px; flex: 0 0 auto; }
+  .lb-caption { bottom: 10px; padding: 0 58px; font-size: .78rem; }
+  .lightbox button { width: 42px; height: 42px; }
+  .lb-close { top: 12px; right: 12px; }
+  .lb-prev { left: 8px; }
+  .lb-next { right: 8px; }
+}
 
 @media (max-width: 900px) {
   .two-col { grid-template-columns: 1fr; }

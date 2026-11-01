@@ -7,21 +7,158 @@
     const caption = lb.querySelector('.lb-caption');
     let items = [];
     let index = 0;
+    let activeVideo = null;
+    let activeVideoCleanup = null;
 
     const collect = () => Array.from(document.querySelectorAll('[data-lb]'));
+
+    const stopActiveVideo = () => {
+      if (!activeVideo) return;
+      const video = activeVideo;
+      activeVideo = null;
+      activeVideoCleanup?.();
+      activeVideoCleanup = null;
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+    };
 
     const render = () => {
       const el = items[index];
       if (!el) return;
       const type = el.dataset.type;
       const src = el.dataset.src;
-      stage.innerHTML = '';
+      stopActiveVideo();
+      stage.replaceChildren();
       let node;
       if (type === 'video') {
+        const player = document.createElement('div');
+        player.className = 'video-player';
+        player.dataset.state = 'loading';
+
         node = document.createElement('video');
-        node.src = src; node.controls = true; node.autoplay = true; node.playsInline = true;
-        if (el.dataset.poster) node.poster = el.dataset.poster;
+        node.className = 'video-player-media';
+        node.controls = true;
+        node.autoplay = true;
+        node.playsInline = true;
+        node.preload = 'metadata';
+        node.playbackRate = 1;
+        node.setAttribute('playsinline', '');
         node.setAttribute('controlsList', 'nodownload');
+
+        const poster = el.dataset.poster || el.querySelector('img')?.currentSrc || el.querySelector('img')?.getAttribute('src');
+        if (poster) node.poster = poster;
+
+        const status = document.createElement('div');
+        status.className = 'video-player-status';
+        status.setAttribute('role', 'status');
+        status.setAttribute('aria-live', 'polite');
+        const statusMessage = document.createElement('span');
+        statusMessage.className = 'video-player-message';
+        status.appendChild(statusMessage);
+
+        const retry = document.createElement('button');
+        retry.className = 'video-player-retry';
+        retry.type = 'button';
+        retry.textContent = 'Try again';
+        retry.hidden = true;
+        status.appendChild(retry);
+
+        const speedControl = document.createElement('label');
+        speedControl.className = 'video-player-speed';
+        const speedLabel = document.createElement('span');
+        speedLabel.textContent = 'Speed';
+        const speedSelect = document.createElement('select');
+        speedSelect.setAttribute('aria-label', 'Playback speed');
+        speedSelect.value = '1';
+        [
+          ['0.5', '0.5×'],
+          ['0.75', '0.75×'],
+          ['1', '1×'],
+          ['1.25', '1.25×'],
+          ['1.5', '1.5×'],
+          ['2', '2×'],
+        ].forEach(([value, label]) => {
+          const option = document.createElement('option');
+          option.value = value;
+          option.textContent = label;
+          if (value === '1') option.selected = true;
+          speedSelect.appendChild(option);
+        });
+        speedControl.append(speedLabel, speedSelect);
+        player.append(node, status, speedControl);
+        stage.appendChild(player);
+        activeVideo = node;
+        let loadingTimer;
+        const listeners = [];
+        const listen = (target, event, handler) => {
+          target.addEventListener(event, handler);
+          listeners.push(() => target.removeEventListener(event, handler));
+        };
+        activeVideoCleanup = () => {
+          clearTimeout(loadingTimer);
+          listeners.forEach((removeListener) => removeListener());
+        };
+
+        const setStatus = (state, message, canRetry = false) => {
+          if (activeVideo !== node) return;
+          clearTimeout(loadingTimer);
+          player.dataset.state = state;
+          statusMessage.textContent = message;
+          retry.hidden = !canRetry;
+          if (state === 'loading') {
+            loadingTimer = setTimeout(() => {
+              setStatus('error', 'Video is taking too long to load. Check your connection and try again.', true);
+            }, 20000);
+          }
+        };
+        const handlePlayError = (error) => {
+          if (error?.name === 'AbortError') return;
+          setStatus('error', 'Playback could not start. Press Play or try again.', true);
+        };
+        const tryPlay = () => {
+          if (activeVideo !== node) return;
+          try {
+            const result = node.play();
+            if (result && typeof result.catch === 'function') result.catch(handlePlayError);
+          } catch (error) {
+            handlePlayError(error);
+          }
+        };
+        let retryWhenReady = false;
+        listen(node, 'loadstart', () => setStatus('loading', 'Loading video…'));
+        listen(node, 'waiting', () => setStatus('loading', 'Buffering video…'));
+        listen(node, 'stalled', () => setStatus('loading', 'Still waiting for the video…'));
+        const ready = () => {
+          setStatus('ready', '');
+          if (retryWhenReady) {
+            retryWhenReady = false;
+            tryPlay();
+          }
+        };
+        listen(node, 'loadeddata', ready);
+        listen(node, 'canplay', ready);
+        listen(node, 'canplaythrough', ready);
+        listen(node, 'playing', ready);
+        listen(node, 'error', () => {
+          retryWhenReady = false;
+          setStatus('error', 'This video could not be loaded. Check your connection and try again.', true);
+        });
+        listen(speedSelect, 'change', () => {
+          if (activeVideo === node) node.playbackRate = Number(speedSelect.value);
+        });
+        listen(retry, 'click', () => {
+          setStatus('loading', 'Retrying video…');
+          if (node.error) {
+            retryWhenReady = true;
+            node.load();
+          } else {
+            tryPlay();
+          }
+        });
+
+        node.src = src;
+        tryPlay();
       } else if (type === 'embed') {
         node = document.createElement('iframe');
         node.src = src + (src.includes('?') ? '&' : '?') + 'autoplay=1';
@@ -32,7 +169,7 @@
         node.src = src; node.alt = el.dataset.caption || '';
         node.draggable = false;
       }
-      stage.appendChild(node);
+      if (type !== 'video') stage.appendChild(node);
       caption.innerHTML = '';
       const text = document.createElement('span');
       text.textContent = `${el.dataset.caption || ''}${items.length > 1 ? `  ·  ${index + 1} / ${items.length}` : ''}`;
@@ -50,7 +187,7 @@
       document.body.style.overflow = 'hidden';
       render();
     };
-    const close = () => { lb.hidden = true; stage.innerHTML = ''; document.body.style.overflow = ''; };
+    const close = () => { lb.hidden = true; stopActiveVideo(); stage.replaceChildren(); document.body.style.overflow = ''; };
     const step = (d) => { if (!items.length) return; index = (index + d + items.length) % items.length; render(); };
 
     document.addEventListener('click', (e) => {
@@ -64,8 +201,11 @@
     document.addEventListener('keydown', (e) => {
       if (lb.hidden) return;
       if (e.key === 'Escape') close();
-      if (e.key === 'ArrowLeft') step(-1);
-      if (e.key === 'ArrowRight') step(1);
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+        if (e.target.closest?.('video, audio, select, input, textarea, button, a, [role="slider"], [contenteditable]:not([contenteditable="false"])')) return;
+        step(e.key === 'ArrowLeft' ? -1 : 1);
+      }
     });
     // swipe
     let sx = 0;
