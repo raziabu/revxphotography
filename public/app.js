@@ -126,6 +126,7 @@
     const bar = zone.querySelector('.bar');
     const text = zone.querySelector('.progress-text');
     const url = zone.dataset.uploader;
+    const useTus = zone.dataset.uploadProtocol === 'tus';
     const CHUNK_SIZE = 64 * 1024 * 1024;
     const TUS_VERSION = '1.0.0';
     const storageKey = (file) => `tus:${url}:${JSON.stringify([file.name, file.size, file.lastModified])}`;
@@ -176,7 +177,7 @@
       xhr.onabort = () => reject(new Error('Upload was interrupted'));
       xhr.send(file.slice(offset, end));
     });
-    const uploadOne = async (file, i, total) => {
+    const uploadTus = async (file, i, total) => {
       const key = storageKey(file);
       let uploadUrl = localStorage.getItem(key);
       let offset;
@@ -208,6 +209,31 @@
       }
       localStorage.removeItem(key);
     };
+    const uploadMultipart = (file, i, total) => new Promise((resolve, reject) => {
+      const formData = new FormData();
+      formData.append('files', file, file.name);
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      xhr.setRequestHeader('Accept', 'application/json');
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable) return;
+        const pct = Math.round(((i + event.loaded / event.total) / total) * 100);
+        bar.style.width = `${pct}%`;
+        text.textContent = `Uploading ${i + 1} of ${total}: ${file.name} (${pct}%)`;
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) return resolve();
+        let message = `Upload failed (${xhr.status})`;
+        try { message = JSON.parse(xhr.responseText).error || message; } catch { /* non-JSON error response */ }
+        reject(new Error(message));
+      };
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.onabort = () => reject(new Error('Upload was interrupted'));
+      xhr.send(formData);
+    });
+    const uploadOne = (file, i, total) => useTus
+      ? uploadTus(file, i, total)
+      : uploadMultipart(file, i, total);
 
     const run = async (files) => {
       if (!files.length) return;
@@ -423,5 +449,40 @@
   });
   document.addEventListener('dragstart', (e) => {
     if (e.target.closest('[data-protect] img')) e.preventDefault();
+  });
+})();
+
+/* Best-effort reminder after a protected page loses focus; this does not detect screenshots. */
+(() => {
+  if (!document.querySelector('[data-protect], [data-lb]')) return;
+  const overlay = document.getElementById('screenshot-protection-overlay');
+  const dismiss = overlay?.querySelector('[data-dismiss-screenshot-warning]');
+  if (!overlay || !dismiss) return;
+
+  let pending = false;
+  let timeout;
+  const hide = () => {
+    clearTimeout(timeout);
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+  };
+  const showIfReturned = () => {
+    if (!pending || document.hidden) return;
+    pending = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    overlay.classList.add('active');
+    clearTimeout(timeout);
+    timeout = setTimeout(hide, 5000);
+  };
+
+  window.addEventListener('blur', () => { pending = true; });
+  window.addEventListener('focus', showIfReturned);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) pending = true;
+    else showIfReturned();
+  });
+  dismiss.addEventListener('click', hide);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && overlay.classList.contains('active')) hide();
   });
 })();

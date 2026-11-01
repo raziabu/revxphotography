@@ -412,3 +412,11 @@ input[type=color] { width: 56px; height: 36px; padding: 2px; border-radius: 8px;
 [data-protect] img { -webkit-user-drag: none; user-select: none; }
 @media (max-width: 900px) { .brand-logo { height: 28px; } }
 @media (max-width: 560px) { .footer { flex-direction: column; gap: 10px; padding: 20px 20px 32px; } }
+.screenshot-protection-overlay {
+  position: fixed; inset: 0; z-index: 999999; display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: rgba(0,0,0,.94); color: var(--text); text-align: center;
+  opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .2s ease, visibility .2s ease;
+}
+.screenshot-protection-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
+.screenshot-protection-message { width: min(100%, 520px); }
+.screenshot-protection-message p:not(.eyebrow) { color: var(--muted); line-height: 1.7; margin: 0 0 22px; }

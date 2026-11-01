@@ -9,6 +9,15 @@
     <span class="muted"><%= settings.tagline || "Photography & film" %></span>
   <% } %>
 </footer>
+<% if (!(typeof admin !== 'undefined' && admin)) { %>
+<div id="screenshot-protection-overlay" class="screenshot-protection-overlay" role="status" aria-live="assertive" aria-hidden="true">
+  <div class="screenshot-protection-message">
+    <p class="eyebrow">Image usage reminder</p>
+    <p>Screenshots cannot be reliably detected or prevented by this website. Please respect the copyright and usage terms for these images.</p>
+    <button class="btn ghost" type="button" data-dismiss-screenshot-warning>Continue viewing</button>
+  </div>
+</div>
+<% } %>
 <div id="lightbox" class="lightbox" hidden>
   <button class="lb-close" aria-label="Close">×</button>
   <button class="lb-prev" aria-label="Previous">‹</button>

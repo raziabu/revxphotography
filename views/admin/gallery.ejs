@@ -94,7 +94,7 @@
   <section class="stack">
     <div class="card stack">
       <h2>Files</h2>
-      <div class="dropzone" data-uploader="/admin/galleries/<%= gallery.id %>/uploads">
+      <div class="dropzone" data-uploader="/admin/galleries/<%= gallery.id %>/uploads" data-upload-protocol="tus">
         <input type="file" multiple accept="image/*,video/*,.heic,.heif,.mov,.mp4,.zip">
         <p><strong>Drop photos &amp; videos here</strong> or click to choose</p>
         <p class="muted small">Resumable uploads up to 200 GB per file. Originals are kept exactly as uploaded. Previews are generated with a watermark for locked galleries.<% if (!hasFfmpeg) { %> Install ffmpeg on the server to get thumbnails for videos.<% } %></p>
